@@ -1,0 +1,2035 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Caderneta do Carro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: cartão do veículo com hodômetro de dígitos em destaque, abas coladas no topo, conteúdo em coluna única de cartões (máx. 760px).
+   Cor: cinza azulado de fundo, tinta quase preta, um azul de acento (o azul da faixa da placa Mercosul). Série 1 a 3 do gráfico seguem a paleta validada. */
+:root{
+  --bg:#eceff3; --card:#fcfdfe; --ink:#0f1722; --ink2:#4a5565; --muted:#657083;
+  --line:#dde2e8; --axis:#c2c9d3; --wash:rgba(15,23,34,.045);
+  --accent:#1f55c4; --on-accent:#ffffff; --accent-soft:#e2eafa;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0b7a3b; --good-bg:#dcf2e4; --warn:#8a5300; --warn-bg:#fdebc6; --crit:#b42318; --crit-bg:#fde2df; --info:#35527f; --info-bg:#e3eaf5;
+  --odo-bg:#10151c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
+  --ff-display:'Big Shoulders Display','Arial Narrow','Roboto Condensed',sans-serif;
+  --ff-body:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1017; --card:#141c26; --ink:#e8edf4; --ink2:#aab4c3; --muted:#8893a3;
+    --line:#243040; --axis:#364458; --wash:rgba(255,255,255,.06);
+    --accent:#6b9bff; --on-accent:#08111f; --accent-soft:#1c2a45;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --good:#4fc07d; --good-bg:#16301f; --warn:#f2b84b; --warn-bg:#3a2c0e; --crit:#ff8a80; --crit-bg:#3d1816; --info:#9fb8e6; --info-bg:#1b2840;
+    --odo-bg:#05080c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1017; --card:#141c26; --ink:#e8edf4; --ink2:#aab4c3; --muted:#8893a3;
+  --line:#243040; --axis:#364458; --wash:rgba(255,255,255,.06);
+  --accent:#6b9bff; --on-accent:#08111f; --accent-soft:#1c2a45;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#4fc07d; --good-bg:#16301f; --warn:#f2b84b; --warn-bg:#3a2c0e; --crit:#ff8a80; --crit-bg:#3d1816; --info:#9fb8e6; --info-bg:#1b2840;
+  --odo-bg:#05080c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--ff-body);font-size:15px;line-height:1.45}
+body.lock{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:760px;margin-inline:auto;padding-inline:16px;padding-block:16px 56px}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.ic{flex:none}
+
+/* topo */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--accent);color:var(--on-accent)}
+.brand h1{font-family:var(--ff-display);font-weight:800;font-size:25px;letter-spacing:.2px;line-height:1;text-wrap:balance}
+.icon-btn{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;border:1px solid transparent;background:transparent;cursor:pointer;color:var(--ink2)}
+.icon-btn:hover{background:var(--wash)}
+
+/* cartão do veículo */
+.vcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px 12px;display:grid;gap:12px}
+.vhead{display:flex;align-items:center;gap:12px;width:100%;min-width:0;text-align:left;background:none;border:0;padding:0;cursor:pointer;border-radius:10px}
+.vhead .vname{flex:1;min-width:0;font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vhead .vsub{display:block;font-weight:400;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.plate{display:inline-flex;flex-direction:column;align-items:stretch;flex:none;background:#fff;border:2px solid #1b1f24;border-radius:7px;overflow:hidden;min-width:88px}
+.plate .band{background:#1b4aa6;color:#fff;font-size:7px;font-weight:700;letter-spacing:2px;text-align:center;padding:1px 6px;line-height:1.3}
+.plate .chars{font-family:var(--ff-display);font-weight:800;font-size:21px;letter-spacing:1.5px;color:#14171b;text-align:center;line-height:1.05;padding:2px 8px 1px}
+.plate.none .chars{font-size:13px;letter-spacing:1px;color:#6b7380;padding:5px 8px 4px}
+.odo{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.odo .dg{display:grid;place-items:center;width:34px;height:50px;border-radius:6px;background:var(--odo-bg);border:1px solid var(--odo-edge);color:var(--odo-fg);font-family:var(--ff-display);font-weight:800;font-size:40px;line-height:1;box-shadow:inset 0 -10px 14px rgba(0,0,0,.35)}
+.odo .unit{margin-left:6px;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.6px;text-transform:uppercase}
+.vfoot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block}
+.sync.local i{background:var(--warn)}
+button.sync{background:none;border:0;padding:6px 0;min-height:36px;cursor:pointer;text-align:left;border-radius:8px}
+button.sync span{text-decoration:underline dotted;text-underline-offset:3px}
+
+/* abas */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;padding-block:10px;background:var(--bg)}
+.tabs:empty{display:none}
+.tabs .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:52px;padding:6px 2px;border:0;border-radius:10px;background:transparent;color:var(--ink2);font-size:12px;font-weight:600;cursor:pointer}
+.tab:hover{background:var(--wash)}
+.tab[aria-current="page"]{background:var(--accent);color:var(--on-accent)}
+.tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* cartões e listas */
+#view{display:grid;gap:14px;padding-top:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}
+.card h2{font-size:16px;font-weight:700;line-height:1.25;text-wrap:balance}
+.card .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.chead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:600;font-size:14.5px;cursor:pointer}
+.btn:hover{background:var(--wash)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}
+.btn.ghost.danger{background:transparent;color:var(--crit);border-color:var(--line)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13px;border-radius:10px}
+.btn.block{width:100%}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px 2px 7px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.5;white-space:nowrap}
+.pill.good{color:var(--good);background:var(--good-bg)}
+.pill.warn{color:var(--warn);background:var(--warn-bg)}
+.pill.crit{color:var(--crit);background:var(--crit-bg)}
+.pill.info{color:var(--info);background:var(--info-bg)}
+.list{display:grid}
+.row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;padding:12px 4px;margin:0;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;border-radius:0}
+.list>.row:first-child{border-top:0}
+.row:hover{background:var(--wash)}
+.row.static{cursor:default}
+.row.static:hover{background:transparent}
+.r-main{min-width:0;flex:1}
+.r-title{font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.r-sub{font-size:13px;color:var(--muted);margin-top:1px;overflow-wrap:anywhere}
+.r-side{text-align:right;flex:none}
+.r-val{font-weight:700;font-variant-numeric:tabular-nums}
+.empty-note{padding:6px 0 2px;color:var(--muted);font-size:14px}
+.banner{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--info-bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px}
+.banner p{flex:1 1 220px;min-width:0}
+
+/* painel */
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
+.kpi .k-l{font-size:12.5px;color:var(--muted);font-weight:500}
+.kpi .k-v{font-family:var(--ff-display);font-weight:700;font-size:34px;line-height:1.05;margin-top:4px;letter-spacing:.2px}
+.kpi .k-v small{font-family:var(--ff-body);font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
+.kpi .k-s{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.k-s.up{color:var(--good)}.k-s.down{color:var(--warn)}
+.alert-list{display:grid}
+.alert{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:12px 4px;cursor:pointer}
+.alert:first-child{border-top:0}
+.alert:hover{background:var(--wash)}
+.alert .a-ic{flex:none;margin-top:2px}
+.alert.crit .a-ic{color:var(--crit)}.alert.warn .a-ic{color:var(--warn)}
+.alert .a-t{font-weight:600}
+.alert .a-d{font-size:13px;color:var(--muted)}
+.steps{display:grid}
+.step{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:12px 4px;cursor:pointer}
+.step:first-child{border-top:0}
+.step:hover{background:var(--wash)}
+.step .chk{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:2px solid var(--axis);color:transparent}
+.step.done .chk{background:var(--good);border-color:var(--good);color:#fff}
+.step.done .st-t{color:var(--muted);text-decoration:line-through}
+
+/* gráficos */
+.chart{position:relative;width:100%;min-height:120px}
+.chart svg{display:block;max-width:100%}
+.chart .t{fill:var(--muted);font-family:var(--ff-body);font-size:11px}
+.chart .tv{fill:var(--ink);font-weight:600}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{stroke:var(--axis);stroke-width:1}
+.chart .avg{stroke:var(--ink2);stroke-width:2;stroke-linecap:round}
+.chart .s1{fill:var(--s1)}.chart .s2{fill:var(--s2)}.chart .s3{fill:var(--s3)}
+.chart .mk{transition:filter .12s}
+.chart .mk.hov{filter:brightness(1.14)}
+.chart .hit{fill:transparent;cursor:default}
+.chart .hit:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tip{position:absolute;z-index:4;pointer-events:none;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.25);max-width:220px}
+.tip .tv{font-weight:700;font-size:13px;font-variant-numeric:tabular-nums}
+.tip .tl{opacity:.8}
+.tip .tk{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink2);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.legend i.ln{height:3px;border-radius:2px}
+.tblwrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.tbl th,.tbl td{padding:7px 8px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{border-top:0;color:var(--muted);font-weight:600}
+
+/* combustível */
+.calc{display:grid;gap:10px}
+.calc-out{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;min-height:28px}
+
+/* pneus */
+.tiregrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tirecard{display:grid;gap:6px;align-content:start;min-width:0;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;cursor:pointer}
+.tirecard:hover{background:var(--wash)}
+.tirecard.spare{grid-column:1 / -1}
+.tpos{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--muted)}
+.tagb{flex:none;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;letter-spacing:.2px;text-transform:none}
+.tname{font-weight:600;overflow-wrap:anywhere}
+.tmeta{font-size:12.5px;color:var(--muted)}
+.tadd{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:600;font-size:13.5px}
+.gauge{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.gauge span{display:block;height:100%;border-radius:4px}
+.gauge.good span{background:var(--good)}.gauge.warn span{background:var(--warn)}.gauge.crit span{background:var(--crit)}
+.front-tag{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;text-align:center;margin-bottom:-2px}
+
+/* formulários e janela */
+.modal{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(8,12,18,.58)}
+.sheet{width:100%;max-width:560px;max-height:92%;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));outline:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.sheet-head h2{font-size:18px;font-weight:700;text-wrap:balance}
+form{display:grid;gap:14px}
+.field{display:grid;gap:5px;min-width:0}
+.field label,.lbl{font-size:13px;font-weight:600;color:var(--ink2)}
+.hint{font-size:12.5px;color:var(--muted)}
+.inp{width:100%;min-width:0;min-height:46px;padding:0 12px;border:1px solid var(--axis);border-radius:11px;background:var(--card);font-size:16px}
+textarea.inp{padding:10px 12px;min-height:90px;resize:vertical}
+.inp:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.check{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;cursor:pointer}
+.check input{width:22px;height:22px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.formbar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.formbar .btn.primary{flex:1 1 160px}
+.err{padding:10px 12px;border-radius:10px;background:var(--crit-bg);color:var(--crit);font-size:13.5px;font-weight:500}
+.err.warn{background:var(--warn-bg);color:var(--warn)}
+.del{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.del-q{font-size:14px;font-weight:600;color:var(--crit)}
+.plan-row{display:grid;grid-template-columns:minmax(0,1fr) 84px 72px 44px;gap:8px;align-items:end}
+.plan-row .field label{font-size:12px}
+.plan-head{display:grid;gap:6px}
+.bullets{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px;color:var(--ink2)}
+hr{border:0;border-top:1px solid var(--line,rgba(128,128,128,.25));margin:2px 0;width:100%}
+.toast{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:30;max-width:calc(100% - 32px);padding:11px 16px;border-radius:12px;background:var(--ink);color:var(--bg);font-size:14px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.toast.err{background:var(--crit);color:#fff}
+
+@media (min-width:640px){
+  .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .modal{align-items:center}
+  .sheet{border-radius:18px;padding-bottom:20px}
+}
+@media (max-width:420px){
+  .odo .dg{width:30px;height:46px;font-size:36px}
+  .plan-row{grid-template-columns:minmax(0,1fr) 72px 64px 40px}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation:none!important} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" id="logo" aria-hidden="true"></span>
+      <h1>Caderneta do Carro</h1>
+    </div>
+    <button class="icon-btn" id="btn-more" type="button" aria-label="Mais opções"></button>
+  </header>
+  <div id="vcard"></div>
+  <nav id="tabs" class="tabs" aria-label="Seções do app"></nav>
+  <main id="view"></main>
+</div>
+<div id="modal" class="modal" hidden>
+  <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"></div>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(function(){
+'use strict';
+
+// <logic>
+const MS_DAY=86400000;
+const pad=n=>String(n).padStart(2,'0');
+function todayStr(d){ d=d||new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function dayNum(s){ const p=s.split('-').map(Number); return Math.round(Date.UTC(p[0],p[1]-1,p[2])/MS_DAY); }
+function dateFromDayNum(n){ const d=new Date(n*MS_DAY); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()); }
+function addMonths(s,n){
+  const p=s.split('-').map(Number);
+  const first=new Date(Date.UTC(p[0],p[1]-1+n,1));
+  const last=new Date(Date.UTC(first.getUTCFullYear(),first.getUTCMonth()+1,0)).getUTCDate();
+  return first.getUTCFullYear()+'-'+pad(first.getUTCMonth()+1)+'-'+pad(Math.min(p[2],last));
+}
+function norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim().replace(/\s+/g,' '); }
+function parseDec(v){
+  if(v==null) return NaN;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(!s) return NaN;
+  if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.');
+  return /^\d*\.?\d+$/.test(s)?parseFloat(s):NaN;
+}
+function parseKm(v){
+  if(v==null) return NaN;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(!s) return NaN;
+  s=s.replace(/\./g,'').replace(',','.');
+  return /^\d+(\.\d+)?$/.test(s)?Math.round(parseFloat(s)):NaN;
+}
+const DEFAULT_PLANS=[
+  {type:'Troca de óleo e filtro',everyKm:10000,everyMonths:12},
+  {type:'Filtro de ar',everyKm:15000,everyMonths:null},
+  {type:'Filtro de cabine',everyKm:15000,everyMonths:12},
+  {type:'Fluido de freio',everyKm:null,everyMonths:24},
+  {type:'Alinhamento e balanceamento',everyKm:10000,everyMonths:null},
+  {type:'Pastilhas de freio dianteiras',everyKm:30000,everyMonths:null},
+  {type:'Pastilhas de freio traseiras',everyKm:50000,everyMonths:null},
+  {type:'Amortecedores dianteiros',everyKm:60000,everyMonths:null},
+  {type:'Amortecedores traseiros',everyKm:80000,everyMonths:null},
+  {type:'Bateria',everyKm:null,everyMonths:36},
+  {type:'Correia dentada',everyKm:60000,everyMonths:60}
+];
+const TAGS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+function normVehicle(v){
+  const o=v||{};
+  o.name=o.name||'Veículo'; o.plate=o.plate||''; o.fuelDefault=o.fuelDefault||'gasolina'; o.kmNow=+o.kmNow||0;
+  ['fuel','maint','plans','tireHistory','tireEvents','wear'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+  o.tires=Object.assign({DE:null,DD:null,TE:null,TD:null,ES:null},o.tires||{});
+  Object.keys(o.tires).forEach(k=>{ if(o.tires[k]&&!Array.isArray(o.tires[k].grooves)) o.tires[k].grooves=[]; });
+  const used=new Set(); const POSL=['DE','DD','TE','TD','ES'];
+  POSL.forEach(k=>{ if(o.tires[k]&&o.tires[k].tag) used.add(String(o.tires[k].tag).toUpperCase()); });
+  POSL.forEach(k=>{ const tr=o.tires[k]; if(tr&&!tr.tag){ const n=TAGS.find(x=>!used.has(x))||String(used.size+1); tr.tag=n; used.add(n); } });
+  return o;
+}
+function currentKm(v){
+  let k=+v.kmNow||0;
+  const up=a=>{ if(typeof a==='number'&&isFinite(a)&&a>k) k=a; };
+  (v.fuel||[]).forEach(f=>up(f.km));
+  (v.maint||[]).forEach(m=>up(m.km));
+  (v.tireEvents||[]).forEach(e=>up(e.km));
+  (v.tireHistory||[]).forEach(h=>up(h.removeKm));
+  (v.wear||[]).forEach(w=>up(w.km));
+  Object.values(v.tires||{}).forEach(t=>{ if(t){ up(t.installKm); (t.grooves||[]).forEach(g=>up(g.km)); } });
+  return k;
+}
+function fuelStats(list){
+  const s=[...list].sort((a,b)=>a.km-b.km||String(a.date).localeCompare(String(b.date)));
+  const iv=[]; let last=null, liters=0, cost=0;
+  for(const f of s){
+    if(last){
+      liters+=f.liters; cost+=f.total;
+      if(f.full){
+        const dist=f.km-last.km;
+        if(dist>0&&liters>0) iv.push({id:f.id,date:f.date,km:f.km,dist:dist,liters:liters,cost:cost,kmpl:dist/liters,perKm:cost/dist,fuel:f.fuel});
+        last=f; liters=0; cost=0;
+      }
+    } else if(f.full){ last=f; }
+  }
+  return iv;
+}
+function fuelSummary(iv){
+  if(!iv.length) return null;
+  let d=0,l=0,c=0;
+  iv.forEach(x=>{ d+=x.dist; l+=x.liters; c+=x.cost; });
+  return {avg:d/l,last:iv[iv.length-1].kmpl,perKm:c/d,n:iv.length,dist:d};
+}
+function fuelRatio(iv){
+  const g={etanol:{d:0,l:0,n:0},gasolina:{d:0,l:0,n:0}};
+  iv.forEach(x=>{ const a=g[x.fuel]; if(a){ a.d+=x.dist; a.l+=x.liters; a.n++; } });
+  if(g.etanol.n>=2&&g.gasolina.n>=2){
+    const e=g.etanol.d/g.etanol.l, ga=g.gasolina.d/g.gasolina.l;
+    return {ratio:Math.min(0.85,Math.max(0.55,e/ga)),nE:g.etanol.n,nG:g.gasolina.n};
+  }
+  return null;
+}
+function lastMonths(n,today){
+  const p=today.split('-').map(Number); const out=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date(Date.UTC(p[0],p[1]-1-i,1)); out.push(d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)); }
+  return out;
+}
+function spendByMonth(v,months){
+  const res=months.map(k=>({k:k,fuel:0,maint:0,tires:0})); const ix={}; res.forEach((r,i)=>ix[r.k]=i);
+  const add=(date,key,val)=>{ if(!date||!(val>0)) return; const i=ix[String(date).slice(0,7)]; if(i!=null) res[i][key]+=val; };
+  (v.fuel||[]).forEach(f=>add(f.date,'fuel',f.total));
+  (v.maint||[]).forEach(m=>add(m.date,'maint',m.cost));
+  Object.values(v.tires||{}).forEach(t=>{ if(t) add(t.installDate,'tires',t.price); });
+  (v.tireHistory||[]).forEach(t=>add(t.installDate,'tires',t.price));
+  return res;
+}
+function planStatus(plan,maint,kmNow,today){
+  const key=norm(plan.type);
+  const recs=maint.filter(m=>norm(m.type)===key).sort((a,b)=>String(b.date).localeCompare(String(a.date))||b.km-a.km);
+  if(!recs.length) return {state:'none',rank:3,frac:null};
+  const last=recs[0];
+  let kmLeft=null,daysLeft=null,nextKm=null,nextDate=null; const fr=[];
+  if(plan.everyKm>0){ nextKm=last.km+plan.everyKm; kmLeft=nextKm-kmNow; fr.push(kmLeft/plan.everyKm); }
+  if(plan.everyMonths>0){ nextDate=addMonths(last.date,plan.everyMonths); daysLeft=dayNum(nextDate)-dayNum(today); fr.push(daysLeft/(plan.everyMonths*30.4)); }
+  let state='ok';
+  const kmSoon=kmLeft!=null&&kmLeft<=Math.max(500,plan.everyKm*0.1);
+  const dSoon=daysLeft!=null&&daysLeft<=30;
+  if((kmLeft!=null&&kmLeft<0)||(daysLeft!=null&&daysLeft<0)) state='late';
+  else if(kmSoon||dSoon) state='soon';
+  const rank={late:0,soon:1,ok:2}[state];
+  return {state:state,rank:rank,last:last,nextKm:nextKm,nextDate:nextDate,kmLeft:kmLeft,daysLeft:daysLeft,frac:fr.length?Math.min.apply(null,fr):null};
+}
+function dotInfo(dot,today){
+  const digits=String(dot||'').replace(/\D/g,'');
+  if(digits.length<4) return null;
+  const d4=digits.slice(-4); const w=+d4.slice(0,2), y=2000+(+d4.slice(2));
+  if(w<1||w>53) return null;
+  const mfg=Date.UTC(y,0,1)+(w-1)*7*MS_DAY;
+  const years=(dayNum(today)*MS_DAY-mfg)/(365.25*MS_DAY);
+  if(years<-0.1) return null;
+  return {code:d4,week:w,year:y,ageYears:Math.max(0,years)};
+}
+function tireGroove(t){
+  const g=(t.grooves||[]).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.km-b.km);
+  return g.length?g[g.length-1]:null;
+}
+function tireAlerts(t,today){
+  const out=[]; const g=tireGroove(t);
+  if(g){
+    if(g.mm<=1.6) out.push({lvl:'crit',code:'groove-crit',value:g.mm});
+    else if(g.mm<=3) out.push({lvl:'warn',code:'groove-warn',value:g.mm});
+  }
+  const d=dotInfo(t.dot,today);
+  if(d){
+    if(d.ageYears>=10) out.push({lvl:'crit',code:'age-crit',value:d.ageYears,dot:d.code});
+    else if(d.ageYears>=5) out.push({lvl:'warn',code:'age-warn',value:d.ageYears,dot:d.code});
+  }
+  return out;
+}
+function tireVehicleAlerts(v,kmNow,today){
+  const out=[]; const ev=v.tireEvents||[];
+  const mounted=Object.keys(v.tires||{}).filter(k=>k!=='ES'&&v.tires[k]);
+  if(mounted.length){
+    const rods=ev.filter(e=>e.kind==='rodizio').sort((a,b)=>b.km-a.km);
+    let base=null;
+    if(rods.length) base=rods[0].km;
+    else { const ks=mounted.map(k=>v.tires[k].installKm).filter(x=>typeof x==='number'); if(ks.length) base=Math.min.apply(null,ks); }
+    if(base!=null&&kmNow-base>=10000) out.push({lvl:'warn',code:'rodizio',value:kmNow-base});
+    const cals=ev.filter(e=>e.kind==='calibragem').sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    if(cals.length){ const days=dayNum(today)-dayNum(cals[0].date); if(days>30) out.push({lvl:'warn',code:'calibragem',value:days}); }
+  }
+  return out;
+}
+const WEAR_PARTS={'pad-f':{label:'Pastilhas dianteiras',key:'diant'},'pad-r':{label:'Pastilhas traseiras',key:'trase'}};
+function wearList(v,part){
+  const key=WEAR_PARTS[part].key;
+  const repl=(v.maint||[]).filter(m=>{ const t=norm(m.type); return t.indexOf('pastilha')>=0&&(t.indexOf(key)>=0||(t.indexOf('diant')<0&&t.indexOf('trase')<0)); })
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date))||b.km-a.km)[0];
+  let list=(v.wear||[]).filter(w=>w.part===part).sort((a,b)=>a.km-b.km||String(a.date).localeCompare(String(b.date)));
+  if(repl) list=list.filter(w=>{ const dd=String(w.date).localeCompare(String(repl.date)); return dd>0||(dd===0&&(w.km>repl.km||(w.fresh&&w.km>=repl.km))); });
+  return list;
+}
+function wearStatus(v,part,kmNow){
+  const list=wearList(v,part); if(!list.length) return null;
+  const first=list[0], last=list[list.length-1];
+  const lvl=last.mm<=3?'crit':last.mm<=5?'warn':'good';
+  let rate=null,kmLeft=null; const dk=last.km-first.km, dm=first.mm-last.mm;
+  if(list.length>=2&&dk>=1000&&dm>0){ rate=dm/dk; kmLeft=Math.max(0,(last.mm-3)/rate-Math.max(0,kmNow-last.km)); }
+  return {last:last,lvl:lvl,rate:rate,kmLeft:kmLeft,n:list.length};
+}
+function wearAlerts(v,kmNow){
+  const out=[];
+  Object.keys(WEAR_PARTS).forEach(p=>{ const st=wearStatus(v,p,kmNow); if(st&&st.lvl!=='good') out.push({lvl:st.lvl,part:p,mm:st.last.mm,kmLeft:st.kmLeft}); });
+  return out;
+}
+const ROT_SCHEMES={reto:{DE:'TE',DD:'TD',TE:'DE',TD:'DD'},cruzado:{DE:'TD',DD:'TE',TE:'DD',TD:'DE'}};
+function nextTag(v){
+  const used=new Set(Object.values(v.tires||{}).filter(Boolean).map(t=>String(t.tag||'').toUpperCase()));
+  (v.tireHistory||[]).forEach(h=>{ if(h.tag) used.add(String(h.tag).toUpperCase()); });
+  return TAGS.find(x=>!used.has(x))||'';
+}
+function planRotation(v,dest){
+  const present=['DE','DD','TE','TD','ES'].filter(p=>v.tires[p]); const seen=new Set();
+  for(const p of present){ const d=dest[p]; if(present.indexOf(d)<0) return {error:'destino'}; if(seen.has(d)) return {error:'duplicado'}; seen.add(d); }
+  const next=Object.assign({},v.tires), moves=[];
+  present.forEach(p=>{ next[dest[p]]=v.tires[p]; if(dest[p]!==p) moves.push({tag:v.tires[p].tag||'',from:p,to:dest[p]}); });
+  return {moves:moves,tires:next};
+}
+function niceScale(max,n){
+  n=n||4;
+  if(!(max>0)) return {max:1,step:0.25,ticks:[0,0.25,0.5,0.75,1]};
+  const raw=max/n, mag=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/mag;
+  const step=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*mag;
+  const top=Math.ceil(max/step-1e-9)*step; const ticks=[];
+  for(let t=0;t<=top+1e-9;t+=step) ticks.push(+t.toFixed(6));
+  return {max:top,step:step,ticks:ticks};
+}
+/* ---- importação de planilha ---- */
+function parseNum(v){ return parseDec(String(v==null?'':v).replace(/R\$/gi,'')); }
+function parseOdo(v){
+  if(v==null) return NaN;
+  let s=String(v).trim().replace(/\s/g,'');
+  if(!s||s==='-') return NaN;
+  if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+  if(!/^\d+(\.\d+)?$/.test(s)) return NaN;
+  return Math.round(parseFloat(s)*10)/10;
+}
+function splitRows(text){
+  text=String(text||'').replace(/^﻿/,'').replace(/\r\n?/g,'\n');
+  const first=text.split('\n').find(l=>l.trim())||'';
+  const has=c=>first.indexOf(c)>=0;
+  const delim=has('\t')?'\t':(has(';')?';':',');
+  const rows=[]; let row=[],cell='',q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ cell+='"'; i++; } else q=false; } else cell+=c; }
+    else if(c==='"'&&cell.trim()===''){ q=true; cell=''; }
+    else if(c===delim){ row.push(cell); cell=''; }
+    else if(c==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+    else cell+=c;
+  }
+  row.push(cell); rows.push(row);
+  return rows.filter(r=>r.some(x=>String(x).trim()!==''));
+}
+function detectDateOrder(cells){
+  let dmy=0,mdy=0;
+  cells.forEach(c=>{ const m=String(c==null?'':c).trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-]\d{2,4}/); if(m){ if(+m[1]>12) dmy++; if(+m[2]>12) mdy++; } });
+  return mdy>dmy?'mdy':'dmy';
+}
+function parseDateAny(raw,order){
+  const s=String(raw==null?'':raw).trim(); if(!s) return null;
+  let y,mo,d,m;
+  if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|[T\s])/))){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m=s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4}|\d{2})(?:$|\s)/))){
+    const a=+m[1],b=+m[2]; y=+m[3]; if(y<100) y+=2000;
+    if(order==='mdy'){ mo=a; d=b; } else { d=a; mo=b; }
+  }
+  else if(/^\d{5}(\.\d+)?$/.test(s)&&+s>20000&&+s<80000){ return dateFromDayNum(Math.floor(+s)-25569); }
+  else return null;
+  if(!(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=1990&&y<=2100)) return null;
+  const str=y+'-'+pad(mo)+'-'+pad(d);
+  return dateFromDayNum(dayNum(str))===str?str:null;
+}
+function importLooksHeader(head){
+  const alpha=head.filter(c=>/[a-zA-ZÀ-ÿ]/.test(String(c==null?'':c))).length;
+  return alpha>=2&&!parseDateAny(head[0],'dmy');
+}
+function importGuess(headers){
+  const H=headers.map(x=>norm(x));
+  const find=fn=>{ for(let i=0;i<H.length;i++) if(fn(H[i])) return i; return -1; };
+  return {
+    date:find(h=>h==='data'||h==='date'||h.indexOf('data ')===0||h==='dia'),
+    desc:find(h=>h.indexOf('descri')===0),
+    liters:find(h=>h==='litros'||h==='litro'||h==='quantidade'||h==='qtd'||h==='volume'),
+    odo:find(h=>/^(km|odometro|hodometro|km total|km painel|quilometragem)$/.test(h)),
+    total:find(h=>h==='valor'||h==='total'||h==='valor total'||h==='r$'||h==='custo'),
+    price:find(h=>h.indexOf('p/litro')>=0||h.indexOf('por litro')>=0||h.indexOf('preco')===0||h==='r$/l'),
+    place:find(h=>h==='posto'||h==='local'||h==='estabelecimento'),
+    fuel:find(h=>h.indexOf('combust')===0)
+  };
+}
+function importKey(date,km,l){ return date+'|'+(+km).toFixed(1)+'|'+(+l).toFixed(2); }
+function buildImport(rows,map,o){
+  o=o||{};
+  const out={items:[],skipped:[],dups:0,warnings:[],order:'dmy',orderRatio:0,descCount:{},needMap:false};
+  const get=(r,i)=>(i>=0&&i<r.length)?r[i]:'';
+  const fd=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(0,4);
+  if(!(map.date>=0)||!(map.odo>=0)){ out.needMap=true; return out; }
+  out.order=detectDateOrder(rows.map(r=>get(r,map.date)));
+  const seen=new Set((o.existing||[]).map(f=>importKey(f.date,f.km,f.liters)));
+  const items=[];
+  rows.forEach((r,ix)=>{
+    const line=ix+(o.firstLine||1);
+    const desc=map.desc>=0?String(get(r,map.desc)).trim():'';
+    if(o.onlyAbast&&map.desc>=0&&desc&&norm(desc).indexOf('abastec')<0){ out.descCount[desc]=(out.descCount[desc]||0)+1; out.skipped.push({line:line,why:'Descrição «'+desc+'»'}); return; }
+    const date=parseDateAny(get(r,map.date),out.order);
+    if(!date){ out.skipped.push({line:line,why:'Data vazia ou inválida'}); return; }
+    const km=parseOdo(get(r,map.odo));
+    if(!(km>0)){ out.skipped.push({line:line,why:'Km vazio ou inválido'}); return; }
+    let l=parseNum(get(r,map.liters)), t=parseNum(get(r,map.total)), p=map.price>=0?parseNum(get(r,map.price)):NaN;
+    if(!(t>0)&&l>0&&p>0) t=l*p;
+    if(!(l>0)&&t>0&&p>0) l=t/p;
+    if(!(l>0)||!(t>0)){ out.skipped.push({line:line,why:'Litros ou valor faltando'}); return; }
+    l=+l.toFixed(3); t=+t.toFixed(2);
+    let fuel=o.fuel||'gasolina';
+    if(map.fuel>=0){ const fx=norm(get(r,map.fuel)); if(fx.indexOf('etanol')>=0||fx.indexOf('alcool')>=0) fuel='etanol'; else if(fx.indexOf('diesel')>=0) fuel='diesel'; else if(fx.indexOf('gnv')>=0) fuel='gnv'; else if(fx.indexOf('gasolina')>=0) fuel='gasolina'; }
+    const key=importKey(date,km,l);
+    if(seen.has(key)){ out.dups++; return; }
+    seen.add(key);
+    const pp=t/l;
+    if(date>todayStr(new Date(Date.now()+864e5))) out.warnings.push({line:line,why:'Data no futuro ('+date.split('-').reverse().join('/')+'), confira o ano'});
+    if(pp<2||pp>15) out.warnings.push({line:line,why:'Preço de R$ '+pp.toFixed(2).replace('.',',')+' por litro parece fora do normal'});
+    if(o.tank&&l>o.tank*1.05) out.warnings.push({line:line,why:l.toFixed(2).replace('.',',')+' L é mais que o tanque ('+String(o.tank).replace('.',',')+' L)'});
+    items.push({date:date,km:km,liters:l,total:t,fuel:fuel,full:true,station:String(get(r,map.place)).trim().slice(0,40),line:line});
+  });
+  items.sort((a,b)=>String(a.date).localeCompare(String(b.date))||a.km-b.km);
+  let bad=0;
+  for(let i=1;i<items.length;i++){
+    if(items[i].km<items[i-1].km){ bad++; out.warnings.push({line:items[i].line,why:'Km menor que o do abastecimento de '+fd(items[i-1].date)+' ('+items[i-1].km+')'}); }
+  }
+  out.orderRatio=items.length?bad/items.length:0;
+  out.items=items;
+  return out;
+}
+function makeDemo(today){
+  let seed=20261008; const rnd=()=>{ seed=(seed*1664525+1013904223)%4294967296; return seed/4294967296; };
+  const r=(a,b)=>a+(b-a)*rnd();
+  const t0=dayNum(today); const D=n=>dateFromDayNum(t0-n);
+  let dn=t0-300, km=41200, i=0; const fuel=[];
+  while(true){
+    dn+=Math.round(r(8,12)); if(dn>t0-2) break;
+    const dist=Math.round(r(380,560)); km+=dist;
+    const eth=(i%9===5); const kmpl=eth?r(7.6,8.8):r(10.8,13.2);
+    const liters=+(dist/kmpl).toFixed(2);
+    const price=eth?+r(3.65,3.95).toFixed(3):+(5.35+((dn-(t0-300))/300)*0.45+r(-0.08,0.08)).toFixed(3);
+    fuel.push({id:'f'+i,date:dateFromDayNum(dn),km:km,liters:liters,total:+(liters*price).toFixed(2),fuel:eth?'etanol':'gasolina',full:(i%7!==3),station:''});
+    i++;
+  }
+  const K=km+120;
+  const maint=[
+    {id:'m1',date:D(420),km:K-19300,type:'Troca de óleo e filtro',cost:279.9,shop:'',notes:''},
+    {id:'m2',date:D(240),km:K-9400,type:'Troca de óleo e filtro',cost:289.9,shop:'Oficina do bairro',notes:'Óleo sintético 5W30'},
+    {id:'m3',date:D(240),km:K-9400,type:'Filtro de ar',cost:62,shop:'Oficina do bairro',notes:''},
+    {id:'m4',date:D(330),km:K-16000,type:'Filtro de cabine',cost:96,shop:'',notes:''},
+    {id:'m5',date:D(110),km:K-4200,type:'Alinhamento e balanceamento',cost:140,shop:'',notes:''},
+    {id:'m6',date:D(715),km:K-24000,type:'Fluido de freio',cost:180,shop:'',notes:''},
+    {id:'m7',date:D(150),km:K-12000,type:'Pastilhas de freio dianteiras',cost:410,shop:'',notes:''}
+  ];
+  const mk=(dot,mm)=>({brand:'Pneu de exemplo',size:'185/65 R15',dot:dot,installDate:D(560),installKm:K-18000,price:640,groove0:8,grooves:[{date:D(20),km:K-300,mm:mm}]});
+  const tires={DE:mk('1822',5.2),DD:mk('1822',4.9),TE:mk('1822',3.6),TD:mk('1822',2.9),
+    ES:{brand:'Original de fábrica',size:'185/65 R15',dot:'0518',installDate:'',installKm:null,price:0,groove0:8,grooves:[]}};
+  const tireEvents=[
+    {id:'e1',kind:'rodizio',date:D(150),km:K-6200,note:'',psiF:null,psiR:null},
+    {id:'e2',kind:'calibragem',date:D(41),km:K-1900,note:'',psiF:32,psiR:30}
+  ];
+  const wear=[{id:'w1',part:'pad-f',date:D(150),km:K-12000,mm:11,fresh:true},{id:'w2',part:'pad-f',date:D(30),km:K-1900,mm:4.6},{id:'w3',part:'pad-r',date:D(30),km:K-1900,mm:9.5}];
+  const plans=DEFAULT_PLANS.map((p,ix)=>Object.assign({id:'p'+ix},p));
+  return normVehicle({name:'Hatch 1.0 (exemplo)',plate:'ABC1D23',fuelDefault:'gasolina',tank:50,kmNow:K,demo:true,fuel:fuel,maint:maint,plans:plans,tires:tires,tireHistory:[],tireEvents:tireEvents,wear:wear});
+}
+// </logic>
+
+/* ---------- utilidades de interface ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const nf0=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
+const nf1=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtKm=n=>Number.isInteger(n)?nf0.format(n):nf1.format(n);
+const brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const brl0=n=>'R$ '+nf0.format(n);
+const fmtDate=s=>{ if(!s) return ''; const p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+const fmtShort=s=>{ const p=s.split('-'); return p[2]+'/'+p[1]; };
+const MON=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MONFULL=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const monAbbr=k=>MON[+k.slice(5)-1];
+const monFull=k=>MONFULL[+k.slice(5)-1];
+const plural=(n,a,b)=>n===1?a:b;
+const fmtIn=x=>String(x).replace('.',',');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const byDateDesc=(a,b)=>String(b.date).localeCompare(String(a.date))||b.km-a.km;
+const FUELS=[['gasolina','Gasolina'],['etanol','Etanol'],['diesel','Diesel'],['gnv','GNV'],['outro','Outro']];
+const fuelName=k=>(FUELS.find(f=>f[0]===k)||[0,'Outro'])[1];
+const ALLPOS=[['DE','Dianteiro esquerdo'],['DD','Dianteiro direito'],['TE','Traseiro esquerdo'],['TD','Traseiro direito'],['ES','Estepe']];
+const posName=p=>(ALLPOS.find(x=>x[0]===p)||[0,p])[1];
+const POSSHORT={DE:'diant. esq.',DD:'diant. dir.',TE:'tras. esq.',TD:'tras. dir.',ES:'estepe'};
+const posShort=p=>POSSHORT[p]||p;
+const moveText=m=>'Pneu '+m.tag+': '+posShort(m.from)+' para '+posShort(m.to);
+const SERVICE_TYPES=['Troca de óleo e filtro','Filtro de ar','Filtro de cabine','Filtro de combustível','Velas de ignição','Correia dentada','Correia do alternador','Pastilhas de freio dianteiras','Pastilhas de freio traseiras','Discos de freio','Fluido de freio','Líquido de arrefecimento','Bateria','Alinhamento e balanceamento','Amortecedores dianteiros','Amortecedores traseiros','Embreagem','Revisão geral'];
+
+const SVGNS='http://www.w3.org/2000/svg';
+function h(tag,props){
+  const e=document.createElement(tag);
+  if(props) for(const k in props){
+    const v=props[k]; if(v==null||v===false) continue;
+    if(k==='class') e.className=v;
+    else if(k==='style') e.style.cssText=v;
+    else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2),v);
+    else e.setAttribute(k,v===true?'':v);
+  }
+  for(let i=2;i<arguments.length;i++) kids(e,arguments[i]);
+  return e;
+}
+function kids(e,c){
+  if(c==null||c===false) return;
+  if(Array.isArray(c)) c.forEach(x=>kids(e,x));
+  else e.append(c.nodeType?c:document.createTextNode(String(c)));
+}
+function s(tag,props){
+  const e=document.createElementNS(SVGNS,tag);
+  if(props) for(const k in props){
+    const v=props[k]; if(v==null||v===false) continue;
+    if(k==='style') e.style.cssText=v;
+    else if(k.slice(0,2)==='on') e.addEventListener(k.slice(2),v); else e.setAttribute(k,v===true?'':v);
+  }
+  for(let i=2;i<arguments.length;i++) kids(e,arguments[i]);
+  return e;
+}
+const ICONS={
+  plus:'M12 5v14M5 12h14', x:'M6 6l12 12M18 6L6 18', check:'M5 12.5l4.5 4.5L19 7.5',
+  alert:'M12 4l9 16H3L12 4zM12 10v4.5M12 17.5v.01',
+  stop:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8.5 8.5l7 7M15.5 8.5l-7 7',
+  info:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 11v5M12 8v.01',
+  gauge:'M4 17a8 8 0 1 1 16 0M12 17l4-5M7 17h.01',
+  fuel:'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14M4 20h12M15 9h2.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V9l-3-3M7.5 8h5',
+  wrench:'M14.5 6a4 4 0 0 0 5 5l-9.2 9.2a2 2 0 0 1-2.8-2.8L16.7 8.2M14.5 6A4 4 0 0 1 17 3.5l-2 2 1.5 1.5 2-2',
+  tire:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 3v3M12 18v3M3 12h3M18 12h3',
+  more:'M5 12h.01M12 12h.01M19 12h.01', chev:'M6 9l6 6 6-6', trash:'M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13',
+  up:'M12 19V5M6 11l6-6 6 6', down:'M12 5v14M6 13l6 6 6-6', table:'M4 5h16v14H4zM4 10h16M10 5v14', chart:'M5 19V9M12 19V5M19 19v-7',
+  car:'M4 15l1.5-5a2 2 0 0 1 1.9-1.4h9.2a2 2 0 0 1 1.9 1.4L20 15M3 15h18v3H3zM7 18v1.5M17 18v1.5'
+};
+function icon(n,size){
+  const z=size||18;
+  return s('svg',{viewBox:'0 0 24 24',width:z,height:z,fill:'none',stroke:'currentColor','stroke-width':'2','stroke-linecap':'round','stroke-linejoin':'round','aria-hidden':'true',class:'ic'},s('path',{d:ICONS[n]}));
+}
+function pill(lvl,text){ return h('span',{class:'pill '+lvl},icon({good:'check',warn:'alert',crit:'stop',info:'info'}[lvl],13),text); }
+function plateEl(p){ return h('span',{class:'plate'+(p?'':' none')},h('span',{class:'band'},'BRASIL'),h('span',{class:'chars'},p||'SEM PLACA')); }
+function odoEl(km){
+  const str=String(Math.round(km)).padStart(6,'0');
+  return h('div',{class:'odo',role:'img','aria-label':nf0.format(km)+' quilômetros'},[...str].map(c=>h('span',{class:'dg','aria-hidden':'true'},c)),h('span',{class:'unit','aria-hidden':'true'},'km'));
+}
+let toastT;
+function toast(msg,kind){
+  const t=$('#toast'); t.textContent=msg; t.className='toast'+(kind?' '+kind:''); t.hidden=false;
+  clearTimeout(toastT); toastT=setTimeout(()=>{ t.hidden=true; },4200);
+}
+
+/* ---------- estado e armazenamento ---------- */
+const S={ready:false,mode:'local',vehicles:[],activeId:null,tab:'painel',showAllFuel:false};
+const UI_KEY='caderneta-do-carro:ui', DATA_KEY='caderneta-do-carro:dados:v1';
+let cloud=null; const wstate={};
+const V=()=>S.vehicles.find(v=>v.id===S.activeId)||S.vehicles[0]||null;
+function stripV(v){ const o=JSON.parse(JSON.stringify(v)); delete o.id; return o; }
+function saveLocal(){ try{ localStorage.setItem(DATA_KEY,JSON.stringify({savedAt:Date.now(),vehicles:S.vehicles})); }catch(e){} }
+function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem(DATA_KEY)||'null'); if(j&&Array.isArray(j.vehicles)) return j.vehicles.map(normVehicle); }catch(e){} return []; }
+function saveUI(){ try{ localStorage.setItem(UI_KEY,JSON.stringify({tab:S.tab,activeId:S.activeId})); }catch(e){} }
+function loadUI(){ try{ const j=JSON.parse(localStorage.getItem(UI_KEY)||'null'); if(j){ if(['painel','combustivel','manutencao','pneus'].indexOf(j.tab)>=0) S.tab=j.tab; S.activeId=j.activeId||null; } }catch(e){} }
+async function persist(id){
+  if(S.mode!=='cloud'){ saveAll(); return; }
+  const st=wstate[id]||(wstate[id]={busy:false,dirty:false});
+  if(st.busy){ st.dirty=true; return; }
+  st.busy=true;
+  try{
+    do{ st.dirty=false; const v=S.vehicles.find(x=>x.id===id); if(!v) break; await cloud.coll.doc(id).set(stripV(v)); }while(st.dirty);
+  }catch(e){ failCloud(e); }
+  finally{ st.busy=false; }
+}
+async function dropVehicle(id){
+  S.vehicles=S.vehicles.filter(x=>x.id!==id);
+  if(S.mode==='cloud'){ try{ await cloud.coll.doc(id).delete(); }catch(e){ failCloud(e); } } else saveAll();
+  afterLoad(); saveUI(); render();
+}
+function failCloud(e){
+  if(S.mode!=='cloud') return;
+  const code=e&&e.code;
+  S.mode='local';
+  try{ if(cloud&&cloud.unsub) cloud.unsub(); }catch(_){}
+  cloud=null; saveLocal();
+  toast(code==='quota_exceeded'?'O armazenamento da conta encheu. Daqui em diante os dados ficam só neste navegador.':'Não consegui salvar na sua conta. Daqui em diante os dados ficam só neste navegador.','err');
+  render();
+}
+function afterLoad(){ if(!S.vehicles.some(v=>v.id===S.activeId)) S.activeId=S.vehicles[0]?S.vehicles[0].id:null; }
+function onSnap(snap){
+  if(snap.metadata&&snap.metadata.fromCache&&snap.empty&&!S.ready) return;
+  const list=[];
+  snap.docs.forEach(d=>{
+    if(!d.exists) return;
+    const data=d.data(); if(!data||typeof data!=='object') return;
+    const local=S.vehicles.find(x=>x.id===d.id); const w=wstate[d.id];
+    if(local&&w&&(w.busy||w.dirty)) list.push(local);
+    else list.push(normVehicle(Object.assign(JSON.parse(JSON.stringify(data)),{id:d.id})));
+  });
+  list.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  S.vehicles=list; S.ready=true; afterLoad(); render();
+}
+
+/* ---------- arquivo de dados no computador (opção A) ---------- */
+const BK_KEY='caderneta-do-carro:backup';
+function markBackup(){ try{ localStorage.setItem(BK_KEY,String(Date.now())); }catch(e){} }
+function lastBackup(){ try{ return +localStorage.getItem(BK_KEY)||0; }catch(e){ return 0; } }
+const FILE={ok:!window.claude&&typeof window.showSaveFilePicker==='function'&&typeof window.showOpenFilePicker==='function'&&typeof indexedDB!=='undefined',
+  handle:null,name:'',state:'off',lastSaved:0,lastWrite:0,busy:false,dirty:false,timer:null,err:''};
+const PICK_TYPES=[{description:'Dados da Caderneta do Carro',accept:{'application/json':['.json']}}];
+function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('caderneta-do-carro',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function kvGet(k){ const db=await idb(); return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function kvSet(k,val){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').put(val,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function kvDel(k){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+function envelope(){ return {app:'caderneta-do-carro',version:1,savedAt:Date.now(),vehicles:S.vehicles.map(x=>Object.assign({id:x.id},JSON.parse(JSON.stringify(x))))}; }
+function readEnvelope(text){
+  const j=JSON.parse(text);
+  const list=Array.isArray(j)?j:(j&&Array.isArray(j.vehicles)?j.vehicles:null);
+  if(!list) throw new Error('formato');
+  return {savedAt:+j.savedAt||0,vehicles:list.filter(x=>x&&typeof x==='object'&&x.name).map(x=>normVehicle(Object.assign(JSON.parse(JSON.stringify(x)),{id:x.id||'v_'+uid()})))};
+}
+function saveAll(){
+  saveLocal();
+  if(FILE.state==='ready'){ clearTimeout(FILE.timer); FILE.timer=setTimeout(()=>{ FILE.timer=null; writeFileNow(); },350); }
+  shSchedule();
+}
+async function readHandle(handle){
+  const text=await (await handle.getFile()).text();
+  return text.trim()?readEnvelope(text):{savedAt:0,vehicles:[]};
+}
+async function fileInit(){
+  let handle=null; try{ handle=await kvGet('handle'); }catch(e){ return; }
+  if(!handle) return;
+  FILE.handle=handle; FILE.name=handle.name||'arquivo'; FILE.state='pending';
+  if((await handle.queryPermission({mode:'readwrite'}))==='granted') await fileOpenGranted(handle,true);
+}
+async function fileOpenGranted(handle,quiet){
+  const env=await readHandle(handle);
+  FILE.handle=handle; FILE.name=handle.name||'arquivo'; FILE.err='';
+  if(!env.vehicles.length&&S.vehicles.length){ FILE.state='ready'; FILE.lastSaved=env.savedAt; await writeFileNow(true); return; }
+  S.vehicles=env.vehicles; FILE.state='ready'; FILE.lastSaved=env.savedAt;
+  afterLoad(); saveLocal(); markBackup();
+  if(!quiet){ render(); }
+}
+async function fileUnlock(){
+  try{
+    const h0=FILE.handle; if(!h0) return;
+    const perm=await h0.requestPermission({mode:'readwrite'});
+    if(perm!=='granted'){ toast('Sem permissão para abrir o arquivo. Toque de novo e escolha permitir.','err'); return; }
+    await fileOpenGranted(h0,false); closeModal(); render(); toast('Arquivo aberto: '+FILE.name);
+  }catch(e){ FILE.state='error'; FILE.err=(e&&e.message)||''; render(); toast('Não consegui ler o arquivo. Confira se ele ainda existe e se é o arquivo certo.','err'); }
+}
+async function fileUnlink(){
+  try{ await kvDel('handle'); }catch(e){}
+  FILE.handle=null; FILE.name=''; FILE.state='off'; FILE.lastSaved=0; FILE.err=''; clearTimeout(FILE.timer);
+  closeModal(); render(); toast('Arquivo desvinculado. Os dados continuam neste navegador.');
+}
+async function writeFileNow(force){
+  const f=FILE; if(!f.handle||(f.state!=='ready'&&!force)) return;
+  if(f.busy){ f.dirty=true; return; }
+  f.busy=true;
+  try{
+    do{
+      f.dirty=false;
+      if(!force){
+        const cur=await (await f.handle.getFile()).text();
+        let on=null;
+        if(cur.trim()){ try{ on=JSON.parse(cur); }catch(e){ throw new Error('O arquivo está ilegível agora (pode estar sendo sincronizado).'); } }
+        if(on&&(+on.savedAt||0)!==f.lastSaved){ f.state='conflict'; render(); openConflict(); return; }
+      }
+      const env=envelope();
+      const w=await f.handle.createWritable(); await w.write(JSON.stringify(env)); await w.close();
+      f.lastSaved=env.savedAt; f.lastWrite=Date.now(); f.err=''; markBackup();
+    }while(f.dirty);
+  }catch(e){
+    f.state='error'; f.err=(e&&e.message)||'erro'; render();
+    toast('Não consegui gravar no arquivo. Os dados continuam salvos neste navegador.','err');
+  }
+  finally{ f.busy=false; }
+}
+async function linkCreate(){
+  let handle;
+  try{ handle=await window.showSaveFilePicker({suggestedName:'caderneta-do-carro-dados.json',types:PICK_TYPES}); }catch(e){ return; }
+  try{
+    FILE.handle=handle; FILE.name=handle.name||'arquivo'; FILE.state='ready'; FILE.lastSaved=0;
+    FILE.noKeep=false; try{ await kvSet('handle',handle); }catch(e){ FILE.noKeep=true; }
+    await writeFileNow(true);
+    if(FILE.state==='error') return;
+    closeModal(); render(); toast(FILE.noKeep?'Arquivo criado, mas este navegador não guardou o vínculo. Na próxima visita, use «Abrir arquivo que já tenho».':'Arquivo criado. Cada alteração agora é gravada nele.');
+  }catch(e){ FILE.state='error'; FILE.err=(e&&e.message)||''; render(); toast('Não consegui criar o arquivo.','err'); }
+}
+async function linkExisting(){
+  let handle;
+  try{ const hs=await window.showOpenFilePicker({types:PICK_TYPES,multiple:false}); handle=hs[0]; }catch(e){ return; }
+  try{
+    const perm=await handle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted'){ toast('Sem permissão para gravar nesse arquivo.','err'); return; }
+    let env; try{ env=await readHandle(handle); }catch(e){ toast('Esse arquivo não é um arquivo de dados da Caderneta.','err'); return; }
+    const attach=async()=>{ FILE.noKeep=false; try{ await kvSet('handle',handle); }catch(e){ FILE.noKeep=true; } FILE.handle=handle; FILE.name=handle.name||'arquivo'; };
+    if(!env.vehicles.length){
+      await attach(); FILE.state='ready'; FILE.lastSaved=env.savedAt; await writeFileNow(true);
+      if(FILE.state==='error') return; closeModal(); render(); toast('Arquivo vinculado. Seus dados atuais foram gravados nele.'); return;
+    }
+    const apply=async()=>{ await attach(); S.vehicles=env.vehicles; FILE.state='ready'; FILE.lastSaved=env.savedAt; FILE.err=''; afterLoad(); saveLocal(); saveUI(); markBackup(); closeModal(); render(); toast('Arquivo aberto: '+FILE.name); };
+    if(!S.vehicles.length){ await apply(); return; }
+    const nf=env.vehicles.reduce((a,x)=>a+x.fuel.length,0), nl=S.vehicles.reduce((a,x)=>a+x.fuel.length,0);
+    openModal('Usar este arquivo?',h('div',{style:'display:grid;gap:14px'},
+      h('p',null,'O arquivo tem '+env.vehicles.length+' '+plural(env.vehicles.length,'veículo','veículos')+' e '+nf+' abastecimentos. Este navegador tem '+S.vehicles.length+' '+plural(S.vehicles.length,'veículo','veículos')+' e '+nl+' abastecimentos.'),
+      h('p',{class:'hint'},'Usar o arquivo substitui os dados que estão neste navegador. Se ainda precisar deles, baixe um backup antes.'),
+      h('div',{class:'actions'},h('button',{type:'button',class:'btn',onclick:()=>doBackup()},'Baixar backup deste navegador'),
+        h('button',{type:'button',class:'btn danger',onclick:apply},'Usar o arquivo'),h('button',{type:'button',class:'btn',onclick:closeModal},'Cancelar'))),false);
+  }catch(e){ toast('Não consegui abrir esse arquivo.','err'); }
+}
+function doBackup(){
+  return saveFile('caderneta-do-carro-'+todayStr()+'.json',JSON.stringify(Object.assign(envelope(),{exportedAt:new Date().toISOString()}),null,1),markBackup);
+}
+function openConflict(){
+  const body=h('div',{style:'display:grid;gap:14px'},
+    h('p',null,'O arquivo '+FILE.name+' foi alterado fora deste app desde a última vez que o li. Pode ter sido outro computador ou o serviço de nuvem. Para não apagar nada sem você saber, parei de gravar.'),
+    h('div',{style:'display:grid;gap:10px'},
+      h('button',{type:'button',class:'btn primary',onclick:async()=>{
+        try{ const env=await readHandle(FILE.handle); S.vehicles=env.vehicles; afterLoad(); FILE.lastSaved=env.savedAt; FILE.state='ready'; FILE.err=''; saveLocal(); closeModal(); render(); toast('Carreguei a versão do arquivo.'); }
+        catch(e){ toast('Não consegui ler o arquivo.','err'); } }},'Usar a versão do arquivo (perde o que mudei aqui desde que abri)'),
+      h('button',{type:'button',class:'btn danger',onclick:async()=>{
+        try{ FILE.state='ready'; await writeFileNow(true); if(FILE.state==='ready'){ closeModal(); render(); toast('Arquivo sobrescrito com os dados daqui.'); } }
+        catch(e){ toast('Não consegui gravar.','err'); } }},'Sobrescrever o arquivo com o que está aqui'),
+      h('button',{type:'button',class:'btn',onclick:()=>doBackup()},'Baixar uma cópia do que está aqui antes de decidir')));
+  openModal('O arquivo mudou',body,false);
+}
+function syncInfo(){
+  if(S.mode==='cloud') return {t:'Salvo na sua conta',warn:false,btn:false};
+  if(SH.state==='conflict') return {t:'Planilha alterada por fora. Toque para resolver',warn:true,btn:true};
+  if(SH.state==='error') return {t:'Erro no Google Sheets. Toque para ver',warn:true,btn:true};
+  if(SH.state==='offline') return {t:'Sem conexão. Salvo neste aparelho, envio quando voltar',warn:true,btn:true};
+  if(SH.state==='idle') return {t:'Conectando ao Google Sheets...',warn:false,btn:true};
+  if(SH.state==='ready'&&SH.pending) return {t:'Enviando para o Google Sheets...',warn:false,btn:true};
+  if(SH.state==='ready') return {t:FILE.state==='ready'?'Salvo no arquivo e no Google Sheets':'Salvo no Google Sheets',warn:false,btn:true};
+  if(FILE.state==='ready') return {t:'Salvo no arquivo '+FILE.name,warn:false,btn:true};
+  if(FILE.state==='conflict') return {t:'Arquivo alterado por fora. Toque para resolver',warn:true,btn:true};
+  if(FILE.state==='error') return {t:'Erro ao gravar no arquivo. Toque para ver',warn:true,btn:true};
+  return {t:'Salvo só neste navegador',warn:true,btn:!window.claude};
+}
+function openStorage(){
+  const hint=(txt)=>h('p',{class:'hint'},txt);
+  const kids=[];
+  const btn=(lbl,fn,cls)=>h('button',{type:'button',class:'btn '+(cls||''),onclick:fn},lbl);
+  if(SH.ok){
+    if(SH.state==='off'){
+      kids.push(h('p',null,'Quer abrir no celular e no computador com os mesmos dados? Use o Google Sheets como base.'),
+        hint('Os dados ficam na sua planilha, na sua conta Google. O app grava lá a cada alteração e, se faltar sinal, guarda no aparelho e envia quando voltar.'),
+        h('div',{class:'actions'},btn('Configurar o Google Sheets',openShSetup,'primary'),btn('Já configurei, só conectar',openShConnectOnly)),h('hr'));
+    } else {
+      const msg={ready:'Conectado ao Google Sheets. Cada alteração é enviada para a planilha.',idle:'Conectando ao Google Sheets...',offline:'Sem conexão com o Google. Suas alterações estão salvas neste aparelho e serão enviadas quando a conexão voltar.',error:'Houve um erro: '+SH.err,conflict:'A planilha foi alterada em outro aparelho e aqui também há mudanças não enviadas.'}[SH.state]||'';
+      kids.push(h('p',null,msg),
+        SH.lastWrite?hint('Último envio às '+new Date(SH.lastWrite).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.'):null,
+        h('div',{class:'actions'},
+          SH.state==='conflict'?btn('Resolver agora',openShConflict,'primary'):btn('Sincronizar agora',async()=>{ await shSync(); if(SH.state==='ready'){ closeModal(); toast('Sincronizado.'); } else render(); },'primary'),
+          btn('Baixar backup',()=>doBackup()),btn('Desconectar',shDisconnect,'ghost danger')),h('hr'));
+    }
+  }
+  if(!FILE.ok){
+    kids.push(h('p',null,'Este navegador não permite gravar direto em um arquivo do seu computador.'),
+      hint('Para o salvamento automático em arquivo, abra o app no Chrome ou no Edge, no computador. Em qualquer navegador, os dados ficam salvos aqui e você pode baixar um backup quando quiser.'),
+      h('div',{class:'actions'},btn('Baixar backup agora',()=>doBackup(),'primary')));
+  } else if(FILE.state==='ready'||FILE.state==='error'||FILE.state==='conflict'){
+    kids.push(h('p',null,FILE.state==='ready'?'Cada alteração é gravada no arquivo '+FILE.name+'.':FILE.state==='conflict'?'Parei de gravar porque o arquivo '+FILE.name+' foi alterado por fora.':'Houve um erro ao gravar em '+FILE.name+'.'+(FILE.err?' ('+FILE.err+')':'')),
+      FILE.noKeep?hint('Atenção: este navegador não guardou o vínculo com o arquivo. Na próxima visita, escolha o arquivo de novo em «Trocar arquivo».'):null,
+      FILE.lastWrite?hint('Última gravação às '+new Date(FILE.lastWrite).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.'):null,
+      h('div',{class:'actions'},
+        FILE.state==='conflict'?btn('Resolver agora',()=>openConflict(),'primary'):null,
+        FILE.state==='error'?btn('Tentar gravar de novo',async()=>{ FILE.state='ready'; await writeFileNow(); if(FILE.state==='ready'){ closeModal(); render(); toast('Gravado.'); } },'primary'):null,
+        btn('Baixar backup',()=>doBackup()),btn('Trocar arquivo',()=>linkExisting()),btn('Criar outro arquivo',()=>linkCreate()),btn('Desvincular',()=>fileUnlink(),'ghost danger')),
+      hint('Dica: guarde o arquivo numa pasta do Google Drive, OneDrive ou Dropbox para ter uma cópia na nuvem sem esforço. Abra o app em um computador por vez, para um não sobrescrever o outro.'));
+  } else {
+    kids.push(h('p',null,'Hoje os dados ficam só neste navegador. Se você limpar os dados do site, eles somem.'),
+      hint('Crie um arquivo de dados numa pasta sua (de preferência numa pasta do Google Drive, OneDrive ou Dropbox). O app grava nele a cada alteração e, quando você voltar, é só liberar o acesso com um toque.'),
+      h('div',{class:'actions'},btn('Criar arquivo de dados',()=>linkCreate(),'primary'),btn('Abrir arquivo que já tenho',()=>linkExisting()),btn('Baixar backup',()=>doBackup())));
+  }
+  openModal('Onde ficam seus dados',h('div',{style:'display:grid;gap:14px'},kids),false);
+}
+function renderPending(){
+  $('#vcard').replaceChildren(); $('#tabs').replaceChildren();
+  $('#view').replaceChildren(h('section',{class:'card',style:'display:grid;gap:12px'},
+    h('div',null,h('h2',null,'Abrir seus dados'),h('p',{class:'sub',style:'margin-top:4px'},'Seus dados ficam no arquivo '+FILE.name+'. O navegador pede uma autorização a cada visita. Toque abaixo e escolha permitir.')),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:fileUnlock},'Liberar o arquivo'),h('button',{type:'button',class:'btn',onclick:()=>openPendingOther()},'Outras opções')),
+    h('p',{class:'hint'},'Este app não tem como ler o arquivo sem essa autorização. Os dados não saem do seu computador.')));
+}
+function openPendingOther(){
+  openModal('Outras opções',h('div',{style:'display:grid;gap:14px'},
+    h('p',{class:'hint'},'Se o arquivo foi movido ou apagado, escolha outro. Se você desvincular, o app volta a usar os dados guardados neste navegador, que podem estar mais antigos que os do arquivo.'),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn',onclick:()=>linkExisting()},'Escolher outro arquivo'),h('button',{type:'button',class:'btn danger',onclick:()=>fileUnlink()},'Desvincular e usar o navegador'))),false);
+}
+function backupBanner(v){
+  if(S.mode==='cloud'||window.claude||FILE.state==='ready'||SH.state==='ready') return null;
+  if(!(v.fuel.length||v.maint.length)) return null;
+  const last=lastBackup(), days=last?Math.floor((Date.now()-last)/86400000):null;
+  if(days!=null&&days<30) return null;
+  return h('div',{class:'banner'},h('p',null,days==null?'Seus dados estão só neste navegador e você ainda não fez nenhuma cópia de segurança.':'Seus dados estão só neste navegador. A última cópia de segurança foi há '+days+' dias.'),
+    h('div',{class:'actions'},(FILE.ok||SH.ok)?h('button',{type:'button',class:'btn sm primary',onclick:()=>openStorage()},FILE.ok?'Salvar em arquivo ou planilha':'Conectar ao Google Sheets'):null,h('button',{type:'button',class:'btn sm',onclick:()=>doBackup()},'Baixar backup')));
+}
+const SH_SCRIPT="// Caderneta do Carro: ponte entre o app e esta planilha.\n// Não edite as abas \"CadernetaDados\" e \"App ...\" à mão: o app reescreve tudo a cada gravação.\nconst CHAVE = '__CHAVE__';\nconst ABA_DADOS = 'CadernetaDados';\nconst PEDACO = 40000;\nconst ABAS_ESPELHO = ['App Abastecimentos', 'App Manutenção'];\n\nfunction doGet() {\n  return ContentService.createTextOutput('Caderneta do Carro: endereço ativo. Abra o aplicativo para usar.');\n}\n\nfunction doPost(e) {\n  let saida;\n  try {\n    const req = JSON.parse(e.postData.contents);\n    if (!iguais_(String(req.key || ''), CHAVE) || CHAVE.indexOf('__') === 0) {\n      saida = { ok: false, error: 'chave' };\n    } else {\n      const lock = LockService.getScriptLock();\n      lock.waitLock(20000);\n      try { saida = tratar_(req); } finally { lock.releaseLock(); }\n    }\n  } catch (err) {\n    saida = { ok: false, error: 'erro: ' + err.message };\n  }\n  return ContentService.createTextOutput(JSON.stringify(saida)).setMimeType(ContentService.MimeType.JSON);\n}\n\nfunction iguais_(a, b) {\n  if (a.length !== b.length) return false;\n  let r = 0;\n  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);\n  return r === 0;\n}\n\nfunction aba_() {\n  const ss = SpreadsheetApp.getActiveSpreadsheet();\n  return ss.getSheetByName(ABA_DADOS) || ss.insertSheet(ABA_DADOS);\n}\n\nfunction tratar_(req) {\n  const sh = aba_();\n  const atual = Number(sh.getRange('B1').getValue()) || 0;\n  if (req.action === 'load') {\n    const n = Number(sh.getRange('B2').getValue()) || 0;\n    let dados = '';\n    if (n > 0) dados = sh.getRange(3, 1, n, 1).getValues().map(function (l) { return l[0]; }).join('');\n    return { ok: true, savedAt: atual, data: dados };\n  }\n  if (req.action === 'save') {\n    if (!req.force && atual !== 0 && Number(req.base) !== atual) return { ok: false, conflict: true, savedAt: atual };\n    const texto = String(req.data || '');\n    if (!texto) return { ok: false, error: 'vazio' };\n    const pedacos = [];\n    for (let i = 0; i < texto.length; i += PEDACO) pedacos.push([texto.slice(i, i + PEDACO)]);\n    const antigos = Number(sh.getRange('B2').getValue()) || 0;\n    if (antigos > 0) sh.getRange(3, 1, antigos, 1).clearContent();\n    sh.getRange(3, 1, pedacos.length, 1).setValues(pedacos);\n    const agora = Date.now();\n    sh.getRange('A1:B2').setValues([['salvo em', agora], ['pedaços', pedacos.length]]);\n    const tabelas = req.tables || {};\n    ABAS_ESPELHO.forEach(function (nome) {\n      const linhas = tabelas[nome];\n      if (!Array.isArray(linhas) || !linhas.length) return;\n      const ss = SpreadsheetApp.getActiveSpreadsheet();\n      const ab = ss.getSheetByName(nome) || ss.insertSheet(nome);\n      const larg = linhas[0].length;\n      const lim = linhas.map(function (l) { const c = l.slice(0, larg); while (c.length < larg) c.push(''); return c; });\n      ab.clearContents();\n      ab.getRange(1, 1, lim.length, larg).setValues(lim);\n      ab.setFrozenRows(1);\n    });\n    return { ok: true, savedAt: agora };\n  }\n  return { ok: false, error: 'acao' };\n}\n";
+/* ---------- Google Sheets como base de dados (opção C) ---------- */
+const SH_KEY='caderneta-do-carro:planilha', SH_PEND='caderneta-do-carro:pendente';
+const SH={ok:!window.claude&&typeof fetch==='function',url:'',key:'',state:'off',lastSaved:0,lastWrite:0,busy:false,dirty:false,timer:null,err:'',pending:false,loaded:false,remote:null,txt:''};
+const SH_URL_RE=/^https:\/\/script\.google\.com\/[^\s]+\/exec$/;
+function shReadCfg(){
+  try{ const j=JSON.parse(localStorage.getItem(SH_KEY)||'null'); if(j&&SH_URL_RE.test(j.url||'')&&j.key){ SH.url=j.url; SH.key=j.key; SH.lastSaved=+j.lastSaved||0; SH.state='idle'; } SH.pending=localStorage.getItem(SH_PEND)==='1'; }catch(e){}
+}
+function shWriteCfg(){ try{ localStorage.setItem(SH_KEY,JSON.stringify({url:SH.url,key:SH.key,lastSaved:SH.lastSaved})); return true; }catch(e){ return false; } }
+function shSetPending(on){ SH.pending=on; try{ if(on) localStorage.setItem(SH_PEND,'1'); else localStorage.removeItem(SH_PEND); }catch(e){} }
+function shErr(kind,msg){ const e=new Error(msg); e.kind=kind; return e; }
+async function shCall(body,opt){
+  const ctl=typeof AbortController==='function'?new AbortController():null; const to=setTimeout(()=>{ if(ctl) ctl.abort(); },30000);
+  const payload=JSON.stringify(Object.assign({key:SH.key},body));
+  let res;
+  try{ res=await fetch(SH.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:payload,redirect:'follow',credentials:'omit',signal:ctl?ctl.signal:undefined,keepalive:!!(opt&&opt.keepalive)&&payload.length<60000}); }
+  catch(e){ clearTimeout(to); throw shErr('net','Sem conexão com o Google.'); }
+  clearTimeout(to);
+  let j=null; try{ j=JSON.parse(await res.text()); }catch(e){}
+  if(!j||typeof j!=='object') throw shErr('access','O endereço não respondeu como o script esperado. Confira se a implantação está com acesso «Qualquer pessoa» e se o endereço termina em /exec.');
+  if(j.ok===false&&j.error==='chave') throw shErr('key','A chave não confere com a do script.');
+  if(j.ok===false&&!j.conflict) throw shErr('server','O script respondeu com erro: '+(j.error||'desconhecido'));
+  return j;
+}
+function shTables(){
+  const fuelRows=[['Veículo','Data','Km','Combustível','Tanque cheio','Litros','Preço por litro','Total','Posto','Consumo km/L']];
+  const mRows=[['Veículo','Data','Km','Serviço','Custo','Oficina','Observações']];
+  S.vehicles.forEach(v=>{
+    const st=new Map(fuelStats(v.fuel).map(x=>[x.id,x]));
+    [...v.fuel].sort((a,b)=>a.km-b.km).forEach(f=>{ const s2=st.get(f.id); fuelRows.push([v.name,f.date,f.km,fuelName(f.fuel),f.full?'sim':'não',f.liters,+(f.total/f.liters).toFixed(3),f.total,f.station||'',s2?+s2.kmpl.toFixed(2):'']); });
+    [...v.maint].sort((a,b)=>a.date<b.date?-1:1).forEach(m=>mRows.push([v.name,m.date,m.km==null?'':m.km,m.type,m.cost==null?'':m.cost,m.shop||'',m.notes||'']));
+  });
+  return {'App Abastecimentos':fuelRows,'App Manutenção':mRows};
+}
+function shSay(){ const t=syncInfo().t; if(t!==SH.txt){ SH.txt=t; try{ render(); }catch(e){} } }
+async function shPush(force,opt){
+  if(SH.state==='off'||!SH.loaded) return;
+  if(SH.state==='conflict'&&!force) return;
+  if(SH.busy){ SH.dirty=true; return; }
+  SH.busy=true;
+  try{
+    do{
+      SH.dirty=false;
+      const r=await shCall({action:'save',base:SH.lastSaved,force:!!force,data:JSON.stringify(envelope()),tables:shTables()},opt);
+      if(r.conflict){ SH.state='conflict'; SH.remote=null; SH.dirty=false; render(); openShConflict(); return; }
+      SH.lastSaved=r.savedAt; SH.lastWrite=Date.now(); SH.err=''; SH.state='ready'; force=false; shWriteCfg(); markBackup();
+      if(!SH.dirty) shSetPending(false);
+    }while(SH.dirty);
+    shSay();
+  }catch(e){ SH.state=e.kind==='net'?'offline':'error'; SH.err=e.message||'erro'; shSay(); if(e.kind!=='net') toast('Não consegui gravar no Google Sheets. Os dados continuam salvos neste aparelho.','err'); }
+  finally{ SH.busy=false; }
+}
+function shSchedule(){
+  if(SH.state==='off') return;
+  shSetPending(true);
+  if(!SH.loaded||SH.state==='conflict') return;
+  clearTimeout(SH.timer); SH.timer=setTimeout(()=>{ SH.timer=null; shPush(); },900);
+}
+function shFlush(){ if(SH.timer){ clearTimeout(SH.timer); SH.timer=null; shPush(false,{keepalive:true}); } }
+// confere a planilha: baixa se mudou, envia se há alteração pendente, avisa se os dois mudaram
+async function shSync(quiet){
+  if(SH.state==='off'||SH.busy) return;
+  try{
+    const r=await shCall({action:'load'});
+    const had=SH.loaded; SH.err='';
+    if(!r.data){ SH.loaded=true; SH.state='ready'; SH.lastSaved=r.savedAt||0; if(S.vehicles.length) await shPush(true); shSay(); return; }
+    const env=readEnvelope(r.data);
+    if(r.savedAt===SH.lastSaved&&had&&!SH.pending){ SH.state='ready'; shSay(); return; }
+    if(!SH.pending){ S.vehicles=env.vehicles; SH.lastSaved=r.savedAt; SH.loaded=true; SH.state='ready'; afterLoad(); saveLocal(); shWriteCfg(); markBackup(); render(); return; }
+    if(r.savedAt===SH.lastSaved){ SH.loaded=true; SH.state='ready'; await shPush(); return; }
+    SH.loaded=true; SH.state='conflict'; SH.remote={env:env,savedAt:r.savedAt}; render(); openShConflict();
+  }catch(e){ SH.loaded=SH.loaded||false; SH.state=e.kind==='net'?'offline':'error'; SH.err=e.message||'erro'; shSay(); }
+}
+function shConnectInfo(){ return SH.state==='off'?null:{url:SH.url}; }
+async function shConnect(url,key){
+  url=String(url||'').trim(); key=String(key||'').trim();
+  if(!SH_URL_RE.test(url)){ toast('O endereço precisa começar com https://script.google.com/ e terminar em /exec.','err'); return; }
+  if(key.length<12){ toast('A chave precisa ter pelo menos 12 caracteres.','err'); return; }
+  const old={url:SH.url,key:SH.key,state:SH.state,lastSaved:SH.lastSaved};
+  SH.url=url; SH.key=key;
+  let r; try{ r=await shCall({action:'load'}); }
+  catch(e){ SH.url=old.url; SH.key=old.key; toast(e.message,'err'); return; }
+  const finish=async(take,env)=>{
+    SH.state='ready'; SH.loaded=true; SH.lastSaved=r.savedAt||0; SH.err='';
+    if(!shWriteCfg()) toast('Este navegador não deixou guardar a conexão. Ela vale só até fechar a página.','err');
+    if(take){ S.vehicles=env.vehicles; afterLoad(); saveLocal(); saveUI(); shSetPending(false); markBackup(); closeModal(); render(); toast('Conectado. Carreguei os dados da planilha.'); }
+    else { shSetPending(true); await shPush(true); if(SH.state==='ready'){ closeModal(); render(); toast('Conectado. Seus dados foram enviados para a planilha.'); } }
+  };
+  let env=null; if(r.data){ try{ env=readEnvelope(r.data); }catch(e){ SH.url=old.url; SH.key=old.key; toast('A planilha tem dados que não são da Caderneta. Use outra planilha.','err'); return; } }
+  if(!env||!env.vehicles.length){ await finish(false); return; }
+  if(!S.vehicles.length){ await finish(true,env); return; }
+  const nf=env.vehicles.reduce((a,x)=>a+x.fuel.length,0), nl=S.vehicles.reduce((a,x)=>a+x.fuel.length,0);
+  openModal('Qual versão manter?',h('div',{style:'display:grid;gap:14px'},
+    h('p',null,'A planilha já tem '+env.vehicles.length+' '+plural(env.vehicles.length,'veículo','veículos')+' e '+nf+' abastecimentos. Este aparelho tem '+S.vehicles.length+' '+plural(S.vehicles.length,'veículo','veículos')+' e '+nl+' abastecimentos.'),
+    h('p',{class:'hint'},'Não dá para juntar as duas automaticamente. Escolha uma e a outra é substituída. Se tiver dúvida, baixe um backup deste aparelho antes.'),
+    h('div',{style:'display:grid;gap:10px'},
+      h('button',{type:'button',class:'btn primary',onclick:()=>finish(true,env)},'Usar os dados da planilha'),
+      h('button',{type:'button',class:'btn danger',onclick:()=>finish(false)},'Usar os dados deste aparelho (substitui a planilha)'),
+      h('button',{type:'button',class:'btn',onclick:()=>doBackup()},'Baixar backup deste aparelho'),
+      h('button',{type:'button',class:'btn ghost',onclick:()=>{ SH.url=old.url; SH.key=old.key; closeModal(); }},'Cancelar'))),false);
+}
+function shDisconnect(){
+  clearTimeout(SH.timer); SH.timer=null; SH.url=''; SH.key=''; SH.state='off'; SH.loaded=false; SH.lastSaved=0; SH.err=''; shSetPending(false);
+  try{ localStorage.removeItem(SH_KEY); }catch(e){}
+  closeModal(); render(); toast('Desconectado. Os dados continuam neste aparelho e na planilha.');
+}
+function openShConflict(){
+  const body=h('div',{style:'display:grid;gap:14px'},
+    h('p',null,'A planilha foi alterada em outro aparelho e este aparelho também tem alterações que ainda não foram enviadas. Parei de gravar para não apagar nada sem você decidir.'),
+    h('div',{style:'display:grid;gap:10px'},
+      h('button',{type:'button',class:'btn primary',onclick:async()=>{
+        try{ let rem=SH.remote; if(!rem){ const r=await shCall({action:'load'}); rem={env:readEnvelope(r.data),savedAt:r.savedAt}; }
+          S.vehicles=rem.env.vehicles; SH.lastSaved=rem.savedAt; SH.state='ready'; SH.remote=null; shSetPending(false); afterLoad(); saveLocal(); shWriteCfg(); closeModal(); render(); toast('Carreguei a versão da planilha.'); }
+        catch(e){ toast(e.message||'Não consegui ler a planilha.','err'); } }},'Usar a versão da planilha (perde o que mudei aqui)'),
+      h('button',{type:'button',class:'btn danger',onclick:async()=>{ SH.state='ready'; await shPush(true); if(SH.state==='ready'){ closeModal(); render(); toast('Planilha atualizada com os dados daqui.'); } }},'Sobrescrever a planilha com o que está aqui'),
+      h('button',{type:'button',class:'btn',onclick:()=>doBackup()},'Baixar uma cópia do que está aqui antes de decidir')));
+  openModal('A planilha mudou',body,false);
+}
+function shRandomKey(){
+  const al='abcdefghijkmnpqrstuvwxyz23456789'; const b=new Uint8Array(24);
+  try{ crypto.getRandomValues(b); }catch(e){ for(let i=0;i<b.length;i++) b[i]=Math.floor(Math.random()*256); }
+  return Array.from(b,x=>al[x%al.length]).join('');
+}
+function openShSetup(){
+  const key=shRandomKey();
+  const code=SH_SCRIPT.replace('__CHAVE__',key);
+  const ta=h('textarea',{id:'sh-code',class:'inp',readonly:'readonly',rows:'6',style:'font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px',onclick:()=>ta.select()},code);
+  const urlIn=I('sh-url',{type:'url',inputmode:'url',placeholder:'https://script.google.com/macros/s/.../exec'});
+  const keyIn=I('sh-key',{value:key,spellcheck:'false',autocapitalize:'off'});
+  const li=(t)=>h('li',null,t);
+  openModal('Conectar ao Google Sheets',h('div',{style:'display:grid;gap:14px'},
+    h('p',{class:'hint'},'Configuração feita uma vez, uns 10 minutos, no computador. Depois disso o celular só precisa do endereço e da chave.'),
+    h('ol',{style:'margin:0;padding-left:20px;display:grid;gap:8px;line-height:1.45'},
+      li('Abra a sua planilha no Google Sheets (pode ser a que você já usa; o app não mexe nas abas que existem, só cria as dele).'),
+      li('Menu Extensões > Apps Script. Apague o que estiver no editor e cole o script abaixo.'),
+      li('Clique em Implantar > Nova implantação > tipo «App da Web». Executar como: você. Quem tem acesso: Qualquer pessoa. Autorize quando o Google pedir.'),
+      li('Copie o endereço que termina em /exec e cole abaixo, junto com a chave.')),
+    F('sh-code','Script (a sua chave já está dentro dele)',ta),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn',onclick:async()=>{ try{ await navigator.clipboard.writeText(code); toast('Script copiado.'); }catch(e){ ta.focus(); ta.select(); toast('Selecionei o texto. Copie com o atalho do seu aparelho.'); } }},'Copiar script')),
+    F('sh-url','Endereço do app da Web',urlIn),
+    F('sh-key','Chave',keyIn,'Guarde esta chave num lugar seguro. No celular você vai precisar dela uma vez. Quem tiver o endereço e a chave consegue ler e gravar seus dados.'),
+    h('div',{class:'formbar'},h('button',{type:'button',class:'btn',onclick:openStorage},'Voltar'),h('button',{type:'button',class:'btn primary',onclick:()=>shConnect(urlIn.value,keyIn.value)},'Testar e conectar'))),false);
+}
+function openShConnectOnly(){
+  const urlIn=I('sh-url',{type:'url',inputmode:'url',placeholder:'https://script.google.com/macros/s/.../exec'});
+  const keyIn=I('sh-key',{spellcheck:'false',autocapitalize:'off',autocomplete:'off'});
+  openModal('Já configurei a planilha',h('div',{style:'display:grid;gap:14px'},
+    h('p',{class:'hint'},'Cole o endereço e a chave da planilha que você configurou no computador.'),
+    F('sh-url','Endereço do app da Web',urlIn),F('sh-key','Chave',keyIn),
+    h('div',{class:'formbar'},h('button',{type:'button',class:'btn',onclick:openStorage},'Voltar'),h('button',{type:'button',class:'btn primary',onclick:()=>shConnect(urlIn.value,keyIn.value)},'Testar e conectar'))),false);
+}
+
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden'){ if(FILE.timer){ clearTimeout(FILE.timer); FILE.timer=null; writeFileNow(); } shFlush(); } else if(S.ready&&SH.state!=='off'&&SH.state!=='conflict') shSync(true); });
+window.addEventListener('online',()=>{ if(S.ready&&SH.state!=='off'&&SH.state!=='conflict') shSync(true); });
+window.addEventListener('pagehide',()=>{ if(FILE.timer){ clearTimeout(FILE.timer); FILE.timer=null; writeFileNow(); } shFlush(); });
+
+const withTimeout=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),ms))]);
+async function init(){
+  loadUI(); render();
+  let db=null,uid_=null;
+  try{
+    if(window.claude&&window.claude.use){
+      db=await withTimeout(window.claude.use('db'),4000);
+      const user=await withTimeout(window.claude.use('user'),4000);
+      uid_=user?await user.id():null;
+    }
+  }catch(e){ db=null; }
+  if(db&&uid_){
+    try{
+      const coll=db.collection('data/users/'+uid_);
+      S.mode='cloud'; cloud={coll:coll,unsub:null};
+      cloud.unsub=coll.onSnapshot(onSnap,e=>failCloud(e));
+      setTimeout(()=>{ if(!S.ready){ S.ready=true; afterLoad(); render(); } },3500);
+      return;
+    }catch(e){ cloud=null; }
+  }
+  S.mode='local'; S.vehicles=loadLocal();
+  if(FILE.ok){ try{ await fileInit(); }catch(e){ FILE.state='error'; FILE.err=(e&&e.message)||''; } }
+  if(SH.ok) shReadCfg();
+  S.ready=true; afterLoad(); render();
+  if(SH.state!=='off') shSync(true);
+}
+function addVehicle(v){ S.vehicles.push(v); S.activeId=v.id; S.tab='painel'; saveUI(); persist(v.id); render(); }
+function commit(v,msg){ persist(v.id); render(); if(msg) toast(msg); }
+function newVehicle(o){
+  return normVehicle({id:'v_'+uid(),name:o.name,plate:o.plate||'',fuelDefault:o.fuelDefault||'gasolina',tank:o.tank||null,kmNow:o.kmNow||0,
+    plans:o.defaultPlans?DEFAULT_PLANS.map(p=>Object.assign({id:'p_'+uid()},p)):[],createdAt:Date.now()});
+}
+function loadDemo(){
+  const v=normVehicle(Object.assign(makeDemo(todayStr()),{id:'v_'+uid(),createdAt:Date.now()}));
+  addVehicle(v); toast('Dados de exemplo carregados.');
+}
+
+/* ---------- janela e formulários ---------- */
+let lastFocus=null, downOnOverlay=false;
+function openModal(title,body,autofocus){
+  const sheet=$('#sheet');
+  sheet.replaceChildren(h('div',{class:'sheet-head'},h('h2',{id:'modal-title'},title),h('button',{class:'icon-btn',type:'button','aria-label':'Fechar',onclick:closeModal},icon('x'))),body);
+  if($('#modal').hidden) lastFocus=document.activeElement;
+  $('#modal').hidden=false; document.body.classList.add('lock'); sheet.scrollTop=0;
+  setTimeout(()=>{ const f=autofocus?sheet.querySelector('input:not([type=hidden]):not([type=file]),select,textarea'):null; (f||sheet).focus(); },30);
+}
+function closeModal(){
+  $('#modal').hidden=true; document.body.classList.remove('lock');
+  if(lastFocus&&lastFocus.focus&&document.contains(lastFocus)) lastFocus.focus();
+}
+function F(id,label,input,hint){ return h('div',{class:'field'},h('label',{for:id},label),input,hint?h('div',{class:'hint'},hint):null); }
+function I(id,o){ return h('input',Object.assign({id:id,class:'inp',autocomplete:'off'},o||{})); }
+function SEL(id,opts,val){ const e=h('select',{id:id,class:'inp'},opts.map(o=>h('option',{value:o[0]},o[1]))); e.value=val; return e; }
+function ROW2(a,b){ return h('div',{class:'row2'},a,b); }
+function submitBar(label,extra){ return h('div',{class:'formbar'},extra||null,h('button',{type:'submit',class:'btn primary'},label)); }
+function wireForm(form,handler){
+  const btn=form.querySelector('button[type=submit]'); const label=btn.textContent;
+  const err=h('div',{class:'err',role:'alert',hidden:true}); form.insertBefore(err,btn.parentNode);
+  let ack=false;
+  form.addEventListener('input',()=>{ if(ack){ ack=false; btn.textContent=label; } err.hidden=true; });
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    const r=handler(ack)||{ok:true};
+    if(r.error){ err.textContent=r.error; err.className='err'; err.hidden=false; return; }
+    if(r.warn&&!ack){ err.textContent=r.warn.join(' ')+' Se estiver certo, toque em salvar de novo.'; err.className='err warn'; err.hidden=false; ack=true; btn.textContent='Salvar mesmo assim'; }
+  });
+}
+function deleteBlock(label,onConfirm){
+  const wrap=h('div',{class:'del'});
+  const show=()=>wrap.replaceChildren(h('button',{type:'button',class:'btn ghost danger',onclick:ask},icon('trash',16),label));
+  const ask=()=>wrap.replaceChildren(h('span',{class:'del-q'},'Apagar de vez?'),h('button',{type:'button',class:'btn ghost',onclick:show},'Cancelar'),h('button',{type:'button',class:'btn danger',onclick:onConfirm},'Sim, apagar'));
+  show(); return wrap;
+}
+function kmConflict(v,date,km,skipId){
+  const all=[].concat(v.fuel.map(r=>({id:r.id,date:r.date,km:r.km})),v.maint.map(r=>({id:r.id,date:r.date,km:r.km})),v.tireEvents.map(r=>({id:r.id,date:r.date,km:r.km})));
+  return all.find(r=>r.id!==skipId&&r.date&&typeof r.km==='number'&&((r.date<date&&r.km>km)||(r.date>date&&r.km<km)))||null;
+}
+function validDate(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(dayNum(d)); }
+
+/* veículo */
+function openVehicleForm(v){
+  const edit=!!v;
+  const name=I('vf-name',{value:edit?v.name:'',placeholder:'Ex.: Civic da família',maxlength:'40'});
+  const plate=I('vf-plate',{value:edit?v.plate:'',placeholder:'ABC1D23',maxlength:'8',autocapitalize:'characters'});
+  const fuel=SEL('vf-fuel',FUELS,edit?v.fuelDefault:'gasolina');
+  const tank=I('vf-tank',{inputmode:'decimal',value:edit&&v.tank?fmtIn(v.tank):'',placeholder:'50'});
+  const km=I('vf-km',{inputmode:'numeric',value:edit?'':'',placeholder:edit?'Deixe vazio para manter':'Ex.: 54.300'});
+  const plans=h('input',{type:'checkbox',id:'vf-plans',checked:true});
+  const form=h('form',{novalidate:true},
+    F('vf-name','Nome do veículo',name),
+    ROW2(F('vf-plate','Placa (opcional)',plate),F('vf-fuel','Combustível de costume',fuel)),
+    ROW2(F('vf-tank','Tanque (litros)',tank),F('vf-km',edit?'Atualizar km':'Km do painel hoje',km,edit?null:'Vai importar uma planilha? Pode deixar vazio.')),
+    edit?null:h('label',{class:'check'},plans,h('span',null,'Já incluir lembretes comuns de revisão (óleo, filtros, freio, correia, alinhamento). Os intervalos são genéricos, confira o manual do seu carro.')),
+    submitBar(edit?'Salvar':'Cadastrar veículo',edit&&S.vehicles.length>0?deleteBlock('Apagar veículo',()=>{ closeModal(); dropVehicle(v.id); }):null)
+  );
+  wireForm(form,()=>{
+    const nm=name.value.trim(); if(!nm) return {error:'Dê um nome ao veículo.'};
+    const kmv=km.value.trim()?parseKm(km.value):(edit?currentKm(v):0);
+    if(km.value.trim()&&isNaN(kmv)) return {error:'Km inválido. Use só números.'};
+    if(edit&&kmv<currentKm(v)) return {error:'O hodômetro não volta. O maior km registrado é '+nf0.format(currentKm(v))+'.'};
+    let tk=null; if(tank.value.trim()){ tk=parseDec(tank.value); if(!(tk>0&&tk<400)) return {error:'Capacidade do tanque inválida.'}; }
+    const pl=plate.value.trim().toUpperCase();
+    if(edit){ Object.assign(v,{name:nm,plate:pl,fuelDefault:fuel.value,tank:tk,kmNow:Math.max(v.kmNow||0,kmv)}); closeModal(); commit(v,'Veículo atualizado.'); }
+    else { closeModal(); addVehicle(newVehicle({name:nm,plate:pl,fuelDefault:fuel.value,tank:tk,kmNow:kmv,defaultPlans:plans.checked})); toast('Veículo cadastrado.'); }
+    return {ok:true};
+  });
+  openModal(edit?'Editar veículo':'Novo veículo',form,true);
+}
+function openVehicles(){
+  const list=h('div',{class:'list'},S.vehicles.map(v=>h('button',{type:'button',class:'row',onclick:()=>{ S.activeId=v.id; saveUI(); closeModal(); render(); }},
+    h('div',{class:'r-main',style:'display:flex;gap:12px;align-items:center'},plateEl(v.plate),h('div',null,h('div',{class:'r-title'},v.name,v.id===S.activeId?pill('info','Em uso'):null),h('div',{class:'r-sub num'},nf0.format(currentKm(v))+' km'))))));
+  openModal('Meus veículos',h('div',{style:'display:grid;gap:14px'},list,
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:()=>openVehicleForm(null)},icon('plus',16),'Adicionar veículo'),
+      h('button',{type:'button',class:'btn',onclick:()=>openVehicleForm(V())},'Editar este veículo'))));
+}
+function openKmForm(v){
+  const cur=currentKm(v);
+  const km=I('kf-km',{inputmode:'numeric',placeholder:nf0.format(cur)});
+  const form=h('form',{novalidate:true},F('kf-km','Km no painel agora',km,'Último km registrado: '+nf0.format(cur)+'. Manter o km em dia deixa os lembretes de revisão certos.'),submitBar('Atualizar'));
+  wireForm(form,()=>{
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km com números.'};
+    if(k<cur) return {error:'O hodômetro não volta. O maior km registrado é '+nf0.format(cur)+'. Se algum registro está errado, corrija ele.'};
+    v.kmNow=k; closeModal(); commit(v,'Km atualizado.'); return {ok:true};
+  });
+  openModal('Atualizar hodômetro',form,true);
+}
+
+/* abastecimento */
+function openFuelForm(v,rec){
+  const edit=!!rec; const last=[...v.fuel].sort(byDateDesc)[0];
+  const date=I('ff-date',{type:'date',value:edit?rec.date:todayStr()});
+  const km=I('ff-km',{inputmode:'numeric',value:edit?String(rec.km):'',placeholder:last?'Maior que '+nf0.format(last.km):'Km do painel'});
+  const fuel=SEL('ff-fuel',FUELS,edit?rec.fuel:(last?last.fuel:v.fuelDefault));
+  const L=I('ff-l',{inputmode:'decimal',placeholder:'0,00',value:edit?fmtIn(rec.liters):''});
+  const P=I('ff-p',{inputmode:'decimal',placeholder:'0,000',value:edit?fmtIn((rec.total/rec.liters).toFixed(3)):''});
+  const T=I('ff-t',{inputmode:'decimal',placeholder:'0,00',value:edit?fmtIn(rec.total):''});
+  const full=h('input',{type:'checkbox',id:'ff-full',checked:edit?rec.full:true});
+  const station=I('ff-st',{value:edit?(rec.station||''):'',placeholder:'Opcional',maxlength:'40'});
+  let edited=edit?['l','t']:[];
+  const recalc=k=>{
+    edited=edited.filter(x=>x!==k); edited.push(k); if(edited.length>2) edited.shift(); if(edited.length<2) return;
+    const third=['l','p','t'].find(x=>edited.indexOf(x)<0);
+    const l=parseDec(L.value),p=parseDec(P.value),t=parseDec(T.value);
+    if(third==='t'&&l>0&&p>0) T.value=fmtIn((l*p).toFixed(2));
+    if(third==='l'&&p>0&&t>0) L.value=fmtIn((t/p).toFixed(2));
+    if(third==='p'&&l>0&&t>0) P.value=fmtIn((t/l).toFixed(3));
+  };
+  L.addEventListener('input',()=>recalc('l')); P.addEventListener('input',()=>recalc('p')); T.addEventListener('input',()=>recalc('t'));
+  const form=h('form',{novalidate:true},
+    ROW2(F('ff-date','Data',date),F('ff-km','Km do painel',km)),
+    F('ff-fuel','Combustível',fuel),
+    h('div',{class:'row3'},F('ff-l','Litros',L),F('ff-p','R$ por litro',P),F('ff-t','Total (R$)',T)),
+    h('div',{class:'hint',style:'margin-top:-6px'},'Preencha dois dos três. O terceiro é calculado.'),
+    h('label',{class:'check'},full,h('span',null,h('b',null,'Encheu o tanque até o bico'),h('br'),h('span',{class:'hint'},'É assim que o consumo é calculado. Se foi só um pouco, desmarque.'))),
+    F('ff-st','Posto',station),
+    submitBar(edit?'Salvar alterações':'Salvar abastecimento',edit?deleteBlock('Apagar',()=>{ v.fuel=v.fuel.filter(x=>x.id!==rec.id); closeModal(); commit(v,'Abastecimento apagado.'); }):null)
+  );
+  wireForm(form,ack=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseOdo(km.value); if(isNaN(k)||k<=0) return {error:'Informe o km do painel com números.'};
+    let l=parseDec(L.value),t=parseDec(T.value),p=parseDec(P.value);
+    if(!(t>0)&&l>0&&p>0) t=l*p;
+    if(!(l>0)&&t>0&&p>0) l=t/p;
+    if(!(l>0)||!(t>0)) return {error:'Preencha dois entre litros, preço por litro e total.'};
+    l=+l.toFixed(2); t=+t.toFixed(2);
+    const warns=[];
+    const c=kmConflict(v,date.value,k,edit?rec.id:null);
+    if(c) warns.push('Já existe um registro de '+fmtDate(c.date)+' com '+nf0.format(c.km)+' km. Esse km parece fora de ordem.');
+    if(v.tank&&l>v.tank*1.05) warns.push('Você informou '+nf2.format(l)+' L, mas o tanque comporta '+fmtIn(v.tank)+' L.');
+    const pp=t/l; if(pp<2||pp>15) warns.push('O preço de '+brl.format(pp)+' por litro parece fora do normal.');
+    if(dayNum(date.value)>dayNum(todayStr())+1) warns.push('A data está no futuro.');
+    if(warns.length&&!ack) return {warn:warns};
+    const data={date:date.value,km:k,liters:l,total:t,fuel:fuel.value,full:full.checked,station:station.value.trim()};
+    if(edit) Object.assign(rec,data); else v.fuel.push(Object.assign({id:'f_'+uid()},data));
+    closeModal(); commit(v,edit?'Abastecimento atualizado.':'Abastecimento salvo.'); return {ok:true};
+  });
+  openModal(edit?'Editar abastecimento':'Novo abastecimento',form,!edit);
+}
+
+/* manutenção */
+function openMaintForm(v,rec,pre){
+  const edit=!!rec;
+  const date=I('mf-date',{type:'date',value:edit?rec.date:todayStr()});
+  const km=I('mf-km',{inputmode:'numeric',value:edit?String(rec.km):String(currentKm(v)||'')});
+  const known=SERVICE_TYPES.slice();
+  [edit?rec.type:null,pre&&pre.type].concat(v.plans.map(p=>p.type)).forEach(tp0=>{ if(tp0&&!known.some(k=>norm(k)===norm(tp0))) known.push(tp0); });
+  const initType=edit?rec.type:((pre&&pre.type)||'');
+  const initKnown=known.find(k=>norm(k)===norm(initType));
+  const sel=SEL('mf-sel',[['','Escolha o serviço...']].concat(known.map(x=>[x,x])).concat([['__outro','Outro serviço (digitar)...']]),initType?(initKnown||'__outro'):'');
+  const type=I('mf-type',{value:initKnown?'':initType,placeholder:'Nome do serviço',maxlength:'60'});
+  const typeField=F('mf-type','Nome do serviço',type); typeField.hidden=sel.value!=='__outro';
+  const curType=()=>sel.value==='__outro'?type.value.trim():sel.value;
+  const cost=I('mf-cost',{inputmode:'decimal',value:edit&&rec.cost?fmtIn(rec.cost.toFixed(2)):'',placeholder:'0,00'});
+  const shop=I('mf-shop',{value:edit?(rec.shop||''):'',placeholder:'Opcional',maxlength:'40'});
+  const notes=h('textarea',{id:'mf-notes',class:'inp',maxlength:'300',placeholder:'Peças usadas, marca do óleo, garantia...'},edit?(rec.notes||''):'');
+  const pk=I('mf-pk',{inputmode:'numeric',placeholder:'Ex.: 10.000'});
+  const pm=I('mf-pm',{inputmode:'numeric',placeholder:'Ex.: 12'});
+  const fillPlan=()=>{
+    const p=v.plans.find(x=>norm(x.type)===norm(curType()));
+    pk.value=p&&p.everyKm?String(p.everyKm):''; pm.value=p&&p.everyMonths?String(p.everyMonths):'';
+    notes.placeholder=norm(curType())==='bateria'?'Marca, amperagem (Ah), garantia...':'Peças usadas, marca do óleo, garantia...';
+  };
+  sel.addEventListener('change',()=>{ typeField.hidden=sel.value!=='__outro'; if(!typeField.hidden) type.focus(); fillPlan(); });
+  type.addEventListener('change',fillPlan); if(edit||(pre&&pre.type)) fillPlan();
+  const form=h('form',{novalidate:true},
+    ROW2(F('mf-date','Data',date),F('mf-km','Km do painel',km)),
+    F('mf-sel','Serviço',sel),typeField,
+    ROW2(F('mf-cost','Valor total (R$)',cost),F('mf-shop','Oficina',shop)),
+    F('mf-notes','Observações',notes),
+    h('div',{class:'plan-head'},h('div',{class:'lbl'},'Lembrar de novo daqui a'),ROW2(F('mf-pk','Km',pk),F('mf-pm','Meses',pm)),h('div',{class:'hint'},'Opcional. Preencha um, outro ou os dois. O que vencer primeiro dispara o aviso.')),
+    submitBar(edit?'Salvar alterações':'Salvar serviço',edit?deleteBlock('Apagar',()=>{ v.maint=v.maint.filter(x=>x.id!==rec.id); closeModal(); commit(v,'Serviço apagado.'); }):null)
+  );
+  wireForm(form,ack=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km do painel com números.'};
+    const tp=curType(); if(!tp) return {error:'Escolha o serviço que foi feito.'};
+    let c=0; if(cost.value.trim()){ c=parseDec(cost.value); if(isNaN(c)||c<0) return {error:'Valor inválido.'}; }
+    let ek=null,em=null;
+    if(pk.value.trim()){ ek=parseKm(pk.value); if(isNaN(ek)||ek<=0) return {error:'O intervalo em km precisa ser um número maior que zero.'}; }
+    if(pm.value.trim()){ em=parseKm(pm.value); if(isNaN(em)||em<=0) return {error:'O intervalo em meses precisa ser um número maior que zero.'}; }
+    const warns=[]; const cf=kmConflict(v,date.value,k,edit?rec.id:null);
+    if(cf) warns.push('Já existe um registro de '+fmtDate(cf.date)+' com '+nf0.format(cf.km)+' km. Esse km parece fora de ordem.');
+    if(warns.length&&!ack) return {warn:warns};
+    const data={date:date.value,km:k,type:tp,cost:c||0,shop:shop.value.trim(),notes:notes.value.trim()};
+    if(edit) Object.assign(rec,data); else v.maint.push(Object.assign({id:'m_'+uid()},data));
+    if(ek||em){
+      const p=v.plans.find(x=>norm(x.type)===norm(tp));
+      if(p){ p.everyKm=ek; p.everyMonths=em; } else v.plans.push({id:'p_'+uid(),type:tp,everyKm:ek,everyMonths:em});
+    }
+    closeModal(); commit(v,edit?'Serviço atualizado.':'Serviço salvo.'); return {ok:true};
+  });
+  openModal(edit?'Editar serviço':'Registrar serviço',form,false);
+}
+function openPlans(v){
+  const rows=[];
+  const box=h('div',{style:'display:grid;gap:12px'});
+  const addRow=p=>{
+    const t=I('pl-t'+rows.length,{value:p?p.type:'',placeholder:'Serviço',list:'pl-types',maxlength:'60'});
+    const k=I('pl-k'+rows.length,{inputmode:'numeric',value:p&&p.everyKm?String(p.everyKm):'',placeholder:'km'});
+    const m=I('pl-m'+rows.length,{inputmode:'numeric',value:p&&p.everyMonths?String(p.everyMonths):'',placeholder:'meses'});
+    const row={id:p?p.id:'p_'+uid(),t:t,k:k,m:m,removed:false};
+    const del=h('button',{type:'button',class:'icon-btn','aria-label':'Remover lembrete',onclick:()=>{ row.removed=true; el.hidden=true; }},icon('trash',18));
+    const el=h('div',{class:'plan-row'},F(t.id,'Serviço',t),F(k.id,'A cada km',k),F(m.id,'Meses',m),del);
+    row.el=el; rows.push(row); box.append(el);
+  };
+  v.plans.forEach(addRow);
+  const form=h('form',{novalidate:true},
+    h('p',{class:'hint'},'Defina de quanto em quanto tempo cada serviço se repete. Preencha km, meses ou os dois. Os valores iniciais são genéricos: o manual do seu carro manda.'),
+    h('datalist',{id:'pl-types'},SERVICE_TYPES.map(t=>h('option',{value:t}))),
+    box,
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn',onclick:()=>addRow(null)},icon('plus',16),'Novo lembrete'),
+      h('button',{type:'button',class:'btn',onclick:()=>{
+        const have=new Set(rows.filter(r=>!r.removed).map(r=>norm(r.t.value)));
+        const add=DEFAULT_PLANS.filter(d=>!have.has(norm(d.type)));
+        add.forEach(d=>addRow(Object.assign({id:'p_'+uid()},d)));
+        toast(add.length?add.length+' '+plural(add.length,'lembrete adicionado','lembretes adicionados')+'. Toque em salvar.':'Você já tem todos os lembretes sugeridos.');
+      }},'Adicionar sugeridos')),
+    submitBar('Salvar lembretes')
+  );
+  wireForm(form,()=>{
+    const out=[];
+    for(const r of rows){
+      if(r.removed) continue;
+      const tp=r.t.value.trim(); const kk=r.k.value.trim()?parseKm(r.k.value):null; const mm=r.m.value.trim()?parseKm(r.m.value):null;
+      if(!tp&&kk==null&&mm==null) continue;
+      if(!tp) return {error:'Falta o nome de um serviço.'};
+      if((r.k.value.trim()&&(isNaN(kk)||kk<=0))||(r.m.value.trim()&&(isNaN(mm)||mm<=0))) return {error:'Os intervalos de «'+tp+'» precisam ser números maiores que zero.'};
+      if(kk==null&&mm==null) return {error:'Defina km, meses ou os dois para «'+tp+'».'};
+      out.push({id:r.id,type:tp,everyKm:kk,everyMonths:mm});
+    }
+    v.plans=out; closeModal(); commit(v,'Lembretes salvos.'); return {ok:true};
+  });
+  openModal('Lembretes de manutenção',form,false);
+}
+
+/* pneus */
+function openTire(v,pos){
+  const t=v.tires[pos];
+  if(!t){ tireForm(v,pos,null); return; }
+  const today=todayStr(), kmNow=currentKm(v);
+  const g=tireGroove(t), d=dotInfo(t.dot,today);
+  const info=[];
+  info.push(['Identificação','Pneu '+t.tag]);
+  info.push(['Marca e modelo',t.brand||'Não informado']);
+  info.push(['Medida',t.size||'Não informada']);
+  info.push(['DOT (fabricação)',d?(t.dot+' · semana '+d.week+' de '+d.year+' · '+nf1.format(d.ageYears)+' anos'):(t.dot?t.dot:'Não informado')]);
+  if(t.installDate||t.installKm!=null) info.push(['Instalado',[t.installDate?fmtDate(t.installDate):null,t.installKm!=null?nf0.format(t.installKm)+' km':null].filter(Boolean).join(' · ')]);
+  if(t.installKm!=null&&pos!=='ES') info.push(['Rodou',nf0.format(Math.max(0,kmNow-t.installKm))+' km']);
+  if(t.price) info.push(['Preço pago',brl.format(t.price)]);
+  const al=tireAlerts(t,today);
+  const gl=[...t.grooves].sort((a,b)=>String(b.date).localeCompare(String(a.date))||b.km-a.km);
+  const body=h('div',{style:'display:grid;gap:14px'},
+    al.length?h('div',{style:'display:grid;gap:6px'},al.map(a=>h('div',null,pill(a.lvl,tireAlertText(a))))):null,
+    h('div',{class:'list'},info.map(i=>h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-sub'},i[0])),h('div',{class:'r-side num',style:'font-weight:600'},i[1])))),
+    h('div',null,h('div',{class:'lbl',style:'margin-bottom:4px'},'Medições de sulco'),
+      gl.length?h('div',{class:'list'},gl.map(x=>h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title num'},nf1.format(x.mm)+' mm'),h('div',{class:'r-sub'},fmtDate(x.date)+(typeof x.km==='number'?' · '+nf0.format(x.km)+' km':''))),
+        h('button',{type:'button',class:'btn ghost sm',onclick:()=>{ t.grooves=t.grooves.filter(y=>y!==x&&!(y.date===x.date&&y.km===x.km&&y.mm===x.mm)); closeModal(); commit(v,'Medição removida.'); }},'Remover')))):h('div',{class:'empty-note'},'Nenhuma medição ainda. Meça com um medidor de sulco ou olhe o indicador TWI na banda do pneu.')),
+    h('div',{class:'actions'},
+      h('button',{type:'button',class:'btn primary',onclick:()=>grooveForm(v,pos)},'Medir sulco'),
+      h('button',{type:'button',class:'btn',onclick:()=>tireForm(v,pos,t)},'Editar'),
+      h('button',{type:'button',class:'btn',onclick:()=>replaceForm(v,pos)},'Trocar pneu'))
+  );
+  openModal(posName(pos),body,false);
+}
+function tireAlertText(a){
+  switch(a.code){
+    case 'groove-crit': return 'Sulco em '+nf1.format(a.value)+' mm, no limite legal de 1,6 mm. Troque.';
+    case 'groove-warn': return 'Sulco em '+nf1.format(a.value)+' mm. Planeje a troca (o comum é perto de 3 mm).';
+    case 'age-crit': return 'Fabricado há '+nf1.format(a.value)+' anos (DOT '+a.dot+'). Troque, mesmo com sulco.';
+    case 'age-warn': return 'Fabricado há '+nf1.format(a.value)+' anos (DOT '+a.dot+'). Peça uma avaliação.';
+    case 'rodizio': return nf0.format(a.value)+' km desde o último rodízio. O comum é a cada 10.000 km.';
+    case 'calibragem': return 'Calibragem registrada há '+a.value+' dias. Confira a pressão a cada 15 dias.';
+  }
+  return '';
+}
+function tireForm(v,pos,t){
+  const edit=!!t; const isSpare=pos==='ES';
+  const brand=I('tf-brand',{value:edit?t.brand:'',placeholder:'Marca e modelo',maxlength:'40'});
+  const size=I('tf-size',{value:edit?t.size:(Object.values(v.tires).find(x=>x&&x.size)||{}).size||'',placeholder:'Ex.: 195/55 R16',maxlength:'20'});
+  const dot=I('tf-dot',{inputmode:'numeric',value:edit?t.dot:'',placeholder:'Ex.: 2422',maxlength:'12'});
+  const idate=I('tf-date',{type:'date',value:edit?t.installDate:(isSpare?'':todayStr())});
+  const ikm=I('tf-km',{inputmode:'numeric',value:edit?(t.installKm!=null?String(t.installKm):''):(isSpare?'':String(currentKm(v)||'')),placeholder:'Km do painel'});
+  const price=I('tf-price',{inputmode:'decimal',value:edit&&t.price?fmtIn(t.price.toFixed(2)):'',placeholder:'0,00'});
+  const g0=I('tf-g0',{inputmode:'decimal',value:fmtIn(edit?t.groove0:8),placeholder:'8'});
+  const tag=I('tf-tag',{value:edit?(t.tag||''):nextTag(v),placeholder:'Ex.: A',maxlength:'6',autocapitalize:'characters'});
+  const gnow=I('tf-gnow',{inputmode:'decimal',placeholder:'Opcional'});
+  const form=h('form',{novalidate:true},
+    F('tf-brand','Marca e modelo',brand),
+    F('tf-tag','Identificação do pneu',tag,'Escreva essa letra no pneu (giz ou etiqueta). É assim que você não se perde no rodízio.'),
+    ROW2(F('tf-size','Medida',size),F('tf-dot','DOT (4 dígitos)',dot,'Na lateral, depois de «DOT». Os 4 últimos números são semana e ano.')),
+    ROW2(F('tf-date','Instalado em',idate),F('tf-km','Km na instalação',ikm)),
+    ROW2(F('tf-price','Preço deste pneu (R$)',price),F('tf-g0','Sulco novo (mm)',g0)),
+    edit?null:F('tf-gnow','Sulco agora (mm)',gnow,'Opcional. Registra a primeira medição.'),
+    submitBar(edit?'Salvar':'Cadastrar pneu',edit?deleteBlock('Remover pneu',()=>{ v.tires[pos]=null; closeModal(); commit(v,'Pneu removido.'); }):null)
+  );
+  wireForm(form,ack=>{
+    const tg=tag.value.trim().toUpperCase();
+    if(!tg) return {error:'Dê uma identificação ao pneu, por exemplo A, B, C ou D.'};
+    const clash=ALLPOS.find(a=>a[0]!==pos&&v.tires[a[0]]&&String(v.tires[a[0]].tag).toUpperCase()===tg);
+    if(clash) return {error:'Já existe um pneu '+tg+' ('+posName(clash[0]).toLowerCase()+'). Use outra identificação.'};
+    let dt=dot.value.trim(); if(dt){ const dg=dt.replace(/\D/g,''); if(dg.length<4) return {error:'O DOT precisa de 4 dígitos (semana e ano), por exemplo 2422.'}; dt=dg.slice(-4); const w=+dt.slice(0,2); if(w<1||w>53) return {error:'Semana do DOT inválida: '+dt.slice(0,2)+'. Use 01 a 53.'}; }
+    let ik=null; if(ikm.value.trim()){ ik=parseKm(ikm.value); if(isNaN(ik)) return {error:'Km da instalação inválido.'}; }
+    if(idate.value&&!validDate(idate.value)) return {error:'Data de instalação inválida.'};
+    let pr=0; if(price.value.trim()){ pr=parseDec(price.value); if(isNaN(pr)||pr<0) return {error:'Preço inválido.'}; }
+    const gz=parseDec(g0.value); if(!(gz>0&&gz<20)) return {error:'Informe o sulco do pneu novo em mm (em geral entre 7 e 9).'};
+    let gn=null; if(!edit&&gnow.value.trim()){ gn=parseDec(gnow.value); if(isNaN(gn)||gn<0||gn>20) return {error:'Sulco atual inválido.'}; }
+    const warns=[]; if(ik!=null&&ik>currentKm(v)+500) warns.push('O km da instalação ('+nf0.format(ik)+') é maior que o km atual do veículo.');
+    if(warns.length&&!ack) return {warn:warns};
+    const data={tag:tg,brand:brand.value.trim(),size:size.value.trim(),dot:dt,installDate:idate.value||'',installKm:ik,price:pr,groove0:gz};
+    if(edit) Object.assign(t,data);
+    else { const nt=Object.assign(data,{grooves:[]}); if(gn!=null) nt.grooves.push({date:todayStr(),km:currentKm(v),mm:gn}); v.tires[pos]=nt; }
+    closeModal(); commit(v,'Pneu salvo.'); return {ok:true};
+  });
+  openModal((edit?'Editar pneu':'Cadastrar pneu')+' · '+posName(pos),form,!edit);
+}
+function grooveForm(v,pos){
+  const t=v.tires[pos];
+  const date=I('gf-date',{type:'date',value:todayStr()});
+  const km=I('gf-km',{inputmode:'numeric',value:String(currentKm(v)||'')});
+  const mm=I('gf-mm',{inputmode:'decimal',placeholder:'Ex.: 4,5'});
+  const form=h('form',{novalidate:true},
+    ROW2(F('gf-date','Data',date),F('gf-km','Km do painel',km)),
+    F('gf-mm','Sulco (mm)',mm,'Meça no ponto mais gasto. O limite legal é 1,6 mm; o comum é trocar perto de 3 mm.'),
+    submitBar('Salvar medição'));
+  wireForm(form,()=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km do painel.'};
+    const m=parseDec(mm.value); if(isNaN(m)||m<0||m>20) return {error:'Informe o sulco em mm, por exemplo 4,5.'};
+    t.grooves.push({date:date.value,km:k,mm:m}); closeModal(); commit(v,'Medição salva.'); return {ok:true};
+  });
+  openModal('Medir sulco · '+posName(pos),form,true);
+}
+function replaceForm(v,pos){
+  const t=v.tires[pos];
+  const date=I('rf-date',{type:'date',value:todayStr()});
+  const km=I('rf-km',{inputmode:'numeric',value:String(currentKm(v)||'')});
+  const form=h('form',{novalidate:true},
+    h('p',{class:'hint'},'O pneu atual vai para o histórico, com os km que rodou e o custo por 1.000 km. Depois você cadastra o novo.'),
+    ROW2(F('rf-date','Retirado em',date),F('rf-km','Km na retirada',km)),
+    submitBar('Arquivar e cadastrar o novo'));
+  wireForm(form,()=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km do painel.'};
+    const g=tireGroove(t);
+    v.tireHistory.push({id:'h_'+uid(),pos:pos,tag:t.tag,brand:t.brand,size:t.size,dot:t.dot,installDate:t.installDate,installKm:t.installKm,price:t.price,removeDate:date.value,removeKm:k,lastGroove:g?g.mm:null});
+    v.tires[pos]=null; persist(v.id); render(); tireForm(v,pos,null); return {ok:true};
+  });
+  openModal('Trocar pneu · '+posName(pos),form,true);
+}
+function openWear(v,part){
+  const kmNow=currentKm(v), label=WEAR_PARTS[part].label;
+  const list=wearList(v,part).slice().reverse(), st=wearStatus(v,part,kmNow);
+  const body=h('div',{style:'display:grid;gap:14px'},
+    st?h('div',{style:'display:grid;gap:6px'},h('div',null,pill(st.lvl,st.lvl==='crit'?'Trocar':st.lvl==='warn'?'Planeje a troca':'Bom estado')),
+      h('p',{class:'hint'},'Última medição: '+nf1.format(st.last.mm)+' mm.'+(st.kmLeft!=null?wearEstimate(st.kmLeft):' Faça outra medição daqui a alguns milhares de km e eu estimo quando vai chegar a hora de trocar.'))):
+      h('p',{class:'empty-note'},'Nenhuma medição da pastilha atual.'),
+    list.length?h('div',{class:'list'},list.map(x=>h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title num'},nf1.format(x.mm)+' mm'),h('div',{class:'r-sub num'},fmtDate(x.date)+' · '+nf0.format(x.km)+' km')),
+      h('button',{type:'button',class:'btn ghost sm',onclick:()=>{ v.wear=v.wear.filter(y=>y.id!==x.id); closeModal(); commit(v,'Medição removida.'); }},'Remover')))):null,
+    h('p',{class:'hint'},'Meça só o material de atrito, sem a chapa de aço. Pastilha nova costuma ter de 10 a 12 mm. O comum é trocar perto de 3 mm, mas o seu fabricante pode indicar outro valor. Ao registrar a troca das pastilhas, a contagem recomeça.'),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:()=>wearForm(v,part)},'Nova medição')));
+  openModal(label,body,false);
+}
+function wearForm(v,part){
+  const date=I('wf-date',{type:'date',value:todayStr()});
+  const km=I('wf-km',{inputmode:'numeric',value:String(currentKm(v)||'')});
+  const mm=I('wf-mm',{inputmode:'decimal',placeholder:'Ex.: 6,5'});
+  const fresh=h('input',{type:'checkbox',id:'wf-fresh'});
+  const form=h('form',{novalidate:true},ROW2(F('wf-date','Data',date),F('wf-km','Km do painel',km)),F('wf-mm','Material restante (mm)',mm,'Pastilha nova costuma ter de 10 a 12 mm.'),
+    h('label',{class:'check'},fresh,h('span',null,h('b',null,'São pastilhas novas'),h('br'),h('span',{class:'hint'},'Marque se mediu logo depois da troca. Essa medição vira o ponto de partida do desgaste.'))),
+    submitBar('Salvar medição'));
+  wireForm(form,()=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km do painel.'};
+    const m=parseDec(mm.value); if(isNaN(m)||m<=0||m>30) return {error:'Informe a espessura em mm, por exemplo 6,5.'};
+    v.wear.push({id:'w_'+uid(),part:part,date:date.value,km:k,mm:m,fresh:fresh.checked}); closeModal(); commit(v,'Medição salva.'); return {ok:true};
+  });
+  openModal(WEAR_PARTS[part].label+' · medir',form,true);
+}
+function eventForm(v,kind,rec){
+  const edit=!!rec, rod=kind==='rodizio';
+  const date=I('ef-date',{type:'date',value:edit?rec.date:todayStr()});
+  const km=I('ef-km',{inputmode:'numeric',value:edit?String(rec.km):String(currentKm(v)||'')});
+  const pf=I('ef-pf',{inputmode:'decimal',value:edit&&rec.psiF?fmtIn(rec.psiF):'',placeholder:'Ex.: 32'});
+  const pr=I('ef-pr',{inputmode:'decimal',value:edit&&rec.psiR?fmtIn(rec.psiR):'',placeholder:'Ex.: 30'});
+  const note=I('ef-note',{value:edit?(rec.note||''):'',placeholder:'Opcional',maxlength:'80'});
+  const present=['DE','DD','TE','TD','ES'].filter(p=>v.tires[p]);
+  const sels={}; let form=null, moveSec=null;
+  if(rod&&!edit){
+    if(present.length>=2){
+      const opts=present.map(p=>[p,posName(p)]);
+      const selRows=present.map(p=>{ sels[p]=SEL('ef-to-'+p,opts,p); return F('ef-to-'+p,'Pneu '+v.tires[p].tag+' (hoje no '+posName(p).toLowerCase()+') vai para',sels[p]); });
+      const preset=name=>{ const sch=ROT_SCHEMES[name]; present.forEach(p=>{ sels[p].value=(sch[p]&&present.indexOf(sch[p])>=0)?sch[p]:p; }); if(form) form.dispatchEvent(new Event('input',{bubbles:true})); };
+      moveSec=h('div',{style:'display:grid;gap:10px'},h('div',{class:'lbl'},'Para onde cada pneu foi'),
+        h('div',{class:'actions'},h('button',{type:'button',class:'btn sm',onclick:()=>preset('reto')},'Reto'),h('button',{type:'button',class:'btn sm',onclick:()=>preset('cruzado')},'Cruzado em X')),
+        h('div',{class:'hint'},'Reto: o pneu muda de eixo e continua do mesmo lado. Cruzado: muda de eixo e de lado. Pneus direcionais (setas na lateral) só podem usar o reto. O manual do carro indica o esquema certo.'),
+        selRows);
+    } else moveSec=h('p',{class:'hint'},'Cadastre os pneus na aba Pneus e o app passa a trocar cada um de posição no rodízio.');
+  }
+  form=h('form',{novalidate:true},
+    ROW2(F('ef-date','Data',date),F('ef-km','Km do painel',km)),
+    rod?null:ROW2(F('ef-pf','Pressão dianteira (psi)',pf),F('ef-pr','Pressão traseira (psi)',pr)),
+    moveSec,
+    rod&&edit&&rec.moves&&rec.moves.length?h('div',{style:'display:grid;gap:4px'},h('div',{class:'lbl'},'Trocas feitas'),h('p',{class:'hint'},rec.moves.map(moveText).join(' · '))):null,
+    F('ef-note','Observação',note),
+    rod&&edit?h('p',{class:'hint'},'Apagar este registro não desfaz a troca de posição dos pneus. Se a troca saiu errada, faça outro rodízio para corrigir.'):null,
+    submitBar(edit?'Salvar alterações':'Salvar',edit?deleteBlock('Apagar',()=>{ v.tireEvents=v.tireEvents.filter(x=>x.id!==rec.id); closeModal(); commit(v,'Registro apagado.'); }):null));
+  wireForm(form,ack=>{
+    if(!validDate(date.value)) return {error:'Informe a data.'};
+    const k=parseKm(km.value); if(isNaN(k)) return {error:'Informe o km do painel.'};
+    let a=null,b=null;
+    if(!rod){ if(pf.value.trim()){ a=parseDec(pf.value); if(isNaN(a)||a<10||a>80) return {error:'Pressão dianteira inválida. Use psi, por exemplo 32.'}; }
+      if(pr.value.trim()){ b=parseDec(pr.value); if(isNaN(b)||b<10||b>80) return {error:'Pressão traseira inválida. Use psi, por exemplo 30.'}; } }
+    let moves=null,nextTires=null;
+    if(rod&&!edit&&present.length>=2){
+      const dest={}; present.forEach(p=>dest[p]=sels[p].value);
+      const r=planRotation(v,dest);
+      if(r.error) return {error:'Dois pneus estão indo para a mesma posição. Cada posição recebe um pneu só.'};
+      if(!r.moves.length&&!ack) return {warn:['Nenhum pneu mudou de posição. Salvar assim registra o rodízio sem mover os pneus no app.']};
+      moves=r.moves; nextTires=r.tires;
+    }
+    const data={kind:kind,date:date.value,km:k,note:note.value.trim(),psiF:a,psiR:b};
+    if(moves) data.moves=moves;
+    if(edit) Object.assign(rec,data); else v.tireEvents.push(Object.assign({id:'e_'+uid()},data));
+    if(nextTires) v.tires=nextTires;
+    closeModal(); commit(v,moves&&moves.length?'Rodízio salvo. Os pneus trocaram de posição.':'Registro salvo.'); return {ok:true};
+  });
+  openModal((rod?'Rodízio':'Calibragem')+(edit?' · editar':''),form,!edit);
+}
+
+
+/* ---------- importar planilha de abastecimentos ---------- */
+function decodeFileBuffer(buf){
+  try{ return new TextDecoder('utf-8',{fatal:true}).decode(buf); }
+  catch(e){ try{ return new TextDecoder('windows-1252').decode(buf); }catch(e2){ return new TextDecoder().decode(buf); } }
+}
+function openFuelImport(v,prefill){
+  const ta=h('textarea',{id:'if-text',class:'inp',style:'min-height:150px;font-size:12px',placeholder:'Cole aqui as linhas da planilha, com a linha de cabeçalho (Data, Litros, Km, Valor...)'},prefill||'');
+  const file=h('input',{type:'file',id:'if-file',accept:'.csv,.tsv,.txt,text/csv,text/plain',class:'inp',style:'padding:8px 12px'});
+  file.addEventListener('change',()=>{
+    const f=file.files&&file.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{ ta.value=decodeFileBuffer(r.result); ta.dispatchEvent(new Event('input',{bubbles:true})); };
+    r.readAsArrayBuffer(f);
+  });
+  const form=h('form',{novalidate:true},
+    h('p',{class:'hint'},'Selecione as células da planilha (Excel ou Google Planilhas), com o cabeçalho, copie e cole abaixo. Ou salve a planilha como CSV e escolha o arquivo. Nada é gravado antes de você ver a prévia e confirmar.'),
+    F('if-text','Colar da planilha',ta),
+    F('if-file','Ou escolher um arquivo CSV',file),
+    submitBar('Analisar planilha'));
+  wireForm(form,()=>{
+    const rows=splitRows(ta.value);
+    if(rows.length<2) return {error:'Não encontrei linhas suficientes. Cole o cabeçalho e ao menos uma linha de abastecimento.'};
+    if(rows.length>20000) return {error:'São linhas demais para uma importação só. Divida a planilha em partes menores.'};
+    importPreview(v,rows,ta.value); return {ok:true};
+  });
+  openModal('Importar abastecimentos',form,true);
+}
+const IMPORT_FIELDS=[['date','Data'],['odo','Km do painel (hodômetro)'],['liters','Litros'],['total','Valor total (R$)'],['price','Preço por litro (opcional)'],['place','Posto (opcional)'],['desc','Descrição (opcional)'],['fuel','Combustível (opcional)']];
+function importPreview(v,rows,rawText){
+  const hasHead=importLooksHeader(rows[0]);
+  const ncol=Math.max.apply(null,rows.slice(0,200).map(r=>r.length));
+  const headers=hasHead?Array.from({length:ncol},(_,i)=>String(rows[0][i]==null?'':rows[0][i]).trim()):Array.from({length:ncol},(_,i)=>'Coluna '+(i+1));
+  const data=hasHead?rows.slice(1):rows;
+  const guess=hasHead?importGuess(headers):{date:-1,desc:-1,liters:-1,odo:-1,total:-1,price:-1,place:-1,fuel:-1};
+  const opts=[['-1','Não usar']].concat(headers.map((x,i)=>[String(i),(x||'(sem nome)')+'  ·  col. '+(i+1)]));
+  const sels={};
+  const grid=h('div',{class:'row2'},IMPORT_FIELDS.map(f=>{ sels[f[0]]=SEL('im-'+f[0],opts,String(guess[f[0]])); return F('im-'+f[0],f[1],sels[f[0]]); }));
+  const fuelSel=SEL('im-fuelsel',FUELS,v.fuelDefault||'gasolina');
+  const only=h('input',{type:'checkbox',id:'im-only',checked:true});
+  const onlyRow=h('label',{class:'check'},only,h('span',null,'Importar só as linhas de abastecimento ',h('span',{class:'hint'},'(Descrição contendo «abastec»; as outras são ignoradas)')));
+  const prev=h('div',{style:'display:grid;gap:12px'});
+  const goBtn=h('button',{type:'button',class:'btn primary'},'Importar');
+  let cur=null, done=false;
+  const render2=()=>{
+    const map={}; IMPORT_FIELDS.forEach(f=>{ map[f[0]]=+sels[f[0]].value; });
+    onlyRow.hidden=!(map.desc>=0);
+    const res=buildImport(data,map,{fuel:fuelSel.value,onlyAbast:only.checked,existing:v.fuel,firstLine:hasHead?2:1,tank:v.tank});
+    cur=res; prev.replaceChildren();
+    if(res.needMap){ prev.append(h('div',{class:'err warn'},'Escolha pelo menos as colunas Data e Km do painel.')); goBtn.disabled=true; goBtn.textContent='Importar'; return; }
+    const n=res.items.length;
+    prev.append(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap'},
+      pill(n?'good':'warn',n+' '+plural(n,'pronto para importar','prontos para importar')),
+      res.dups?pill('info',res.dups+' já '+plural(res.dups,'cadastrado','cadastrados')):null,
+      res.skipped.length?pill('warn',res.skipped.length+' '+plural(res.skipped.length,'ignorado','ignorados')):null,
+      res.warnings.length?pill('warn',res.warnings.length+' '+plural(res.warnings.length,'aviso','avisos')):null));
+    if(res.orderRatio>0.2) prev.append(h('div',{class:'err warn'},'O km não cresce com o tempo em '+Math.round(res.orderRatio*100)+'% das linhas. Confira se a coluna escolhida é mesmo o hodômetro, e não a distância do trecho.'));
+    if(n){
+      const iv=fuelStats(res.items.map((x,i)=>Object.assign({id:'t'+i},x))), sm=fuelSummary(iv);
+      const tl=res.items.reduce((a,x)=>a+x.liters,0), tc=res.items.reduce((a,x)=>a+x.total,0);
+      prev.append(h('p',{class:'hint',style:'color:var(--ink2)'},fmtDate(res.items[0].date)+' a '+fmtDate(res.items[n-1].date)+' · '+nf1.format(tl)+' L · '+brl.format(tc)+(sm?' · consumo médio '+nf2.format(sm.avg)+' km/L em '+sm.n+' '+plural(sm.n,'trecho','trechos'):'')+'. Todas as linhas entram como tanque cheio.'));
+      const show=res.items.length<=7?res.items:res.items.slice(0,4).concat([null]).concat(res.items.slice(-2));
+      prev.append(h('div',{class:'tblwrap'},table(['Data','Km','Litros','Valor','Posto'],show.map(x=>x?[fmtDate(x.date),fmtKm(x.km),nf2.format(x.liters),brl.format(x.total),x.station||'']:['...','','','','']))));
+    }
+    const list=(arr,label)=>arr.length?h('details',null,h('summary',{style:'cursor:pointer;font-weight:600;font-size:13.5px;min-height:32px;display:flex;align-items:center'},label+' ('+arr.length+')'),h('ul',{class:'bullets',style:'margin-top:6px'},arr.slice(0,40).map(x=>h('li',null,'Linha '+x.line+': '+x.why)),arr.length>40?h('li',null,'e mais '+(arr.length-40)+'...'):null)):null;
+    kids(prev,[list(res.skipped,'Ver linhas ignoradas'),list(res.warnings,'Ver avisos')]);
+    goBtn.disabled=n===0; goBtn.textContent=n?'Importar '+n+' '+plural(n,'abastecimento','abastecimentos'):'Nada para importar';
+  };
+  Object.keys(sels).forEach(k=>sels[k].addEventListener('change',render2));
+  fuelSel.addEventListener('change',render2); only.addEventListener('change',render2);
+  goBtn.addEventListener('click',()=>{
+    if(done||!cur||!cur.items.length) return; done=true;
+    const base=uid(); let i=0;
+    cur.items.forEach(x=>{ v.fuel.push({id:'f_'+base+'_'+(i++),date:x.date,km:x.km,liters:x.liters,total:x.total,fuel:x.fuel,full:true,station:x.station}); });
+    const n=cur.items.length;
+    closeModal(); commit(v,n+' '+plural(n,'abastecimento importado.','abastecimentos importados.'));
+  });
+  const body=h('div',{style:'display:grid;gap:14px'},
+    h('p',{class:'hint'},'Conferi as colunas pelo cabeçalho. Se algo estiver errado, troque aqui. Se houver duas colunas «Km», uma costuma ser o hodômetro e a outra a distância do trecho: o hodômetro é o que cresce sempre.'),
+    grid,ROW2(F('im-fuelsel','Combustível das linhas',fuelSel),h('div')),onlyRow,prev,
+    h('div',{class:'formbar'},h('button',{type:'button',class:'btn',onclick:()=>openFuelImport(v,rawText)},'Voltar'),goBtn));
+  openModal('Prévia da importação',body,false);
+  render2();
+}
+
+/* backup */
+function csvFuel(v){
+  const st=new Map(fuelStats(v.fuel).map(x=>[x.id,x]));
+  const q=x=>'"'+String(x==null?'':x).replace(/"/g,'""')+'"';
+  const n=x=>x==null?'':String(x).replace('.',',');
+  const rows=[['Data','Km','Combustível','Tanque cheio','Litros','Preço por litro','Total','Posto','Consumo km/L']];
+  [...v.fuel].sort((a,b)=>a.km-b.km).forEach(f=>{ const s2=st.get(f.id); rows.push([f.date,f.km,fuelName(f.fuel),f.full?'sim':'não',n(f.liters),n((f.total/f.liters).toFixed(3)),n(f.total),f.station||'',s2?n(s2.kmpl.toFixed(2)):'']); });
+  return '﻿'+rows.map(r=>r.map(q).join(';')).join('\r\n');
+}
+function browserDownload(filename,data){
+  try{
+    const type=/\.csv$/.test(filename)?'text/csv;charset=utf-8':'application/json;charset=utf-8';
+    const url=URL.createObjectURL(new Blob([data],{type:type}));
+    const a=h('a',{href:url,download:filename}); document.body.append(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000); return true;
+  }catch(e){ return false; }
+}
+async function saveFile(filename,data,onOk){
+  let dl=null; try{ dl=await window.claude.use('downloads'); }catch(e){}
+  if(!dl){ if(!window.claude&&browserDownload(filename,data)){ if(onOk) onOk(); toast('Arquivo baixado.'); return; } textFallback(filename,data); return; }
+  try{ await dl.save({filename:filename,data:data}); if(onOk) onOk(); toast('Arquivo salvo.'); }
+  catch(e){ const c=e&&e.code; if(c==='declined') return; if(c==='rate_limited'){ toast('Espere um instante e tente de novo.'); return; } textFallback(filename,data); }
+}
+function textFallback(filename,data){
+  const ta=h('textarea',{class:'inp',readonly:true,style:'min-height:220px;font-size:12px'},data);
+  const copy=h('button',{type:'button',class:'btn primary',onclick:async()=>{ try{ await navigator.clipboard.writeText(data); toast('Copiado.'); }catch(e){ ta.focus(); ta.select(); toast('Selecionei o texto. Copie com o atalho do seu aparelho.'); } }},'Copiar tudo');
+  openModal('Seu arquivo',h('div',{style:'display:grid;gap:12px'},h('p',{class:'hint'},'Não consegui baixar o arquivo daqui. Copie o texto abaixo e cole em um arquivo chamado '+filename+'.'),ta,copy),false);
+}
+function openImport(){
+  const ta=h('textarea',{id:'im-text',class:'inp',style:'min-height:140px;font-size:12px',placeholder:'Cole aqui o conteúdo do backup (.json)'});
+  const file=h('input',{type:'file',id:'im-file',accept:'.json,application/json',class:'inp',style:'padding:8px 12px'});
+  file.addEventListener('change',()=>{ const f=file.files&&file.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ ta.value=String(r.result||''); }; r.readAsText(f); });
+  const form=h('form',{novalidate:true},
+    h('p',{class:'hint'},'Importa os veículos de um backup feito aqui. Eles entram como novos veículos e não apagam os que você já tem.'),
+    F('im-file','Arquivo de backup',file),F('im-text','Ou cole o conteúdo',ta),submitBar('Importar'));
+  wireForm(form,()=>{
+    let j; try{ j=JSON.parse(ta.value); }catch(e){ return {error:'Não consegui ler esse conteúdo. Ele precisa ser o .json do backup.'}; }
+    const list=Array.isArray(j)?j:(j&&Array.isArray(j.vehicles)?j.vehicles:null);
+    if(!list||!list.length) return {error:'Não encontrei veículos nesse backup.'};
+    let n=0;
+    list.forEach(x=>{ if(!x||typeof x!=='object'||!x.name) return; const v=normVehicle(Object.assign(JSON.parse(JSON.stringify(x)),{id:'v_'+uid(),createdAt:Date.now()+n})); S.vehicles.push(v); S.activeId=v.id; persist(v.id); n++; });
+    if(!n) return {error:'Os veículos do arquivo estão sem nome. Não importei nada.'};
+    closeModal(); saveUI(); render(); toast(n+' '+plural(n,'veículo importado.','veículos importados.')); return {ok:true};
+  });
+  openModal('Importar backup',form,false);
+}
+function openMore(){
+  const v=V();
+  const item=(t,sub,fn,ic)=>h('button',{type:'button',class:'row',onclick:fn},h('div',{class:'r-main'},h('div',{class:'r-title'},t),h('div',{class:'r-sub'},sub)),icon(ic||'chev',18));
+  openModal('Mais opções',h('div',{style:'display:grid;gap:14px'},
+    h('div',{class:'list'},
+      item('Meus veículos','Trocar, adicionar ou editar',()=>openVehicles(),'car'),
+      window.claude?null:item('Onde ficam seus dados','Google Sheets, arquivo no computador e backup',()=>openStorage(),'gauge'),
+      v?item('Importar abastecimentos de planilha','Cole o histórico do Excel ou do Google Planilhas',()=>{ closeModal(); S.tab='combustivel'; saveUI(); render(); openFuelImport(v); },'table'):null,
+      v?item('Backup completo (.json)','Todos os veículos, para guardar ou levar para outro lugar',()=>doBackup(),'down'):null,
+      v?item('Abastecimentos em planilha (.csv)','Abre no Excel e no Google Planilhas',()=>saveFile('abastecimentos-'+todayStr()+'.csv',csvFuel(v)),'table'):null,
+      item('Importar backup','Traz veículos de um arquivo .json',()=>openImport(),'plus'),
+      S.vehicles.some(x=>x.demo)?null:item('Ver com dados de exemplo','Carrega um veículo fictício para você explorar',()=>{ closeModal(); loadDemo(); },'gauge')),
+    h('div',{class:'hint'},S.mode==='cloud'?'Seus dados ficam na sua conta, num espaço privado só seu, e acompanham você em qualquer aparelho. Mesmo assim, faça um backup de vez em quando.':(FILE.state==='ready'?'Seus dados são gravados no arquivo '+FILE.name+' a cada alteração. Mantenha também um backup de vez em quando.':'Seus dados estão salvos só neste navegador. Se você limpar os dados do site ou trocar de aparelho, eles somem. Vincule um arquivo ou faça backups com frequência.')))
+  ,false);
+}
+
+/* ---------- gráficos ---------- */
+let observers=[];
+function disposeCharts(){ observers.forEach(o=>o.disconnect()); observers=[]; }
+function mountChart(box,draw){
+  let w0=0;
+  const run=()=>{ const w=Math.floor(box.clientWidth); if(w<=0||w===w0) return; w0=w; box.replaceChildren(); draw(box,w); };
+  run();
+  if(window.ResizeObserver){ const o=new ResizeObserver(run); o.observe(box); observers.push(o); }
+}
+function barPath(x,y,w,hh,r,top){
+  if(!top||hh<r*1.5||w<r*2) return 'M'+x+' '+y+'h'+w+'v'+hh+'h'+(-w)+'Z';
+  return 'M'+x+' '+(y+hh)+'V'+(y+r)+'Q'+x+' '+y+' '+(x+r)+' '+y+'H'+(x+w-r)+'Q'+(x+w)+' '+y+' '+(x+w)+' '+(y+r)+'V'+(y+hh)+'Z';
+}
+function tipShow(box,tip,x,y,lines){
+  tip.replaceChildren.apply(tip,lines); tip.hidden=false;
+  const tw=tip.offsetWidth, th=tip.offsetHeight;
+  const left=Math.max(4,Math.min(x-tw/2,box.clientWidth-tw-4)); let top=y-th-10; if(top<0) top=y+14;
+  tip.style.left=left+'px'; tip.style.top=top+'px';
+}
+function hitRect(box,tip,bar,x,y,w,hh,label,lines,ax,ay){
+  const show=()=>{ if(bar) bar.forEach(b=>b.classList.add('hov')); tipShow(box,tip,ax,ay,lines()); };
+  const hide=()=>{ if(bar) bar.forEach(b=>b.classList.remove('hov')); tip.hidden=true; };
+  return s('rect',{x:x,y:y,width:w,height:hh,class:'hit',tabindex:'0',role:'img','aria-label':label,onpointerenter:show,onpointermove:show,onpointerleave:hide,onfocus:show,onblur:hide});
+}
+function xLabelStep(band,minPx){ return Math.max(1,Math.ceil(minPx/band)); }
+function drawConsumption(data,avg){
+  return (box,w)=>{
+    const H=200,ml=34,mr=10,mt=20,mb=26,pw=w-ml-mr,ph=H-mt-mb,base=mt+ph;
+    const sc=niceScale(Math.max.apply(null,data.map(d=>d.kmpl).concat([avg]))*1.08,4);
+    const y=v=>mt+ph-(v/sc.max)*ph;
+    const svg=s('svg',{width:w,height:H,viewBox:'0 0 '+w+' '+H,role:'group','aria-label':'Gráfico de colunas do consumo em km por litro, um por trecho'});
+    const tip=h('div',{class:'tip',hidden:true});
+    sc.ticks.forEach(t=>{ svg.append(s('line',{x1:ml,x2:w-mr,y1:y(t),y2:y(t),class:t===0?'axis':'grid'}),s('text',{x:ml-6,y:y(t)+4,'text-anchor':'end',class:'t'},sc.step%1?nf1.format(t):nf0.format(t))); });
+    const band=pw/data.length, bw=Math.min(24,Math.max(3,band-4)), step=xLabelStep(band,36);
+    const bars=[],hits=[];
+    data.forEach((d,i)=>{
+      const cx=ml+band*i+band/2, yy=y(d.kmpl);
+      const bar=s('path',{d:barPath(+(cx-bw/2).toFixed(1),+yy.toFixed(1),bw,+(base-yy).toFixed(1),4,true),class:'mk s1'}); bars.push(bar); svg.append(bar);
+      if(i===data.length-1) svg.append(s('text',{x:cx,y:yy-6,'text-anchor':'middle',class:'t tv'},nf1.format(d.kmpl)));
+      if((data.length-1-i)%step===0) svg.append(s('text',{x:cx,y:H-8,'text-anchor':'middle',class:'t'},fmtShort(d.date)));
+      hits.push(hitRect(box,tip,[bar],ml+band*i,mt,band,ph,fmtDate(d.date)+': '+nf1.format(d.kmpl)+' quilômetros por litro',()=>[
+        h('div',{class:'tv'},nf1.format(d.kmpl)+' km/L'),h('div',{class:'tl'},fmtDate(d.date)+' · '+fuelName(d.fuel)),h('div',{class:'tl'},nf0.format(d.dist)+' km com '+nf1.format(d.liters)+' L')],cx,yy));
+    });
+    svg.append(s('line',{x1:ml,x2:w-mr,y1:y(avg),y2:y(avg),class:'avg'}));
+    hits.forEach(x=>svg.append(x));
+    box.append(svg,tip);
+  };
+}
+const CATS=[['fuel','Combustível','s1'],['maint','Manutenção','s2'],['tires','Pneus','s3']];
+function drawSpend(months){
+  return (box,w)=>{
+    const H=210,ml=40,mr=10,mt=22,mb=26,pw=w-ml-mr,ph=H-mt-mb,base=mt+ph;
+    const tot=m=>m.fuel+m.maint+m.tires;
+    const sc=niceScale(Math.max.apply(null,months.map(tot))*1.08,4);
+    const y=v=>mt+ph-(v/sc.max)*ph;
+    const svg=s('svg',{width:w,height:H,viewBox:'0 0 '+w+' '+H,role:'group','aria-label':'Gráfico de colunas empilhadas do gasto mensal em reais'});
+    const tip=h('div',{class:'tip',hidden:true});
+    sc.ticks.forEach(t=>{ svg.append(s('line',{x1:ml,x2:w-mr,y1:y(t),y2:y(t),class:t===0?'axis':'grid'}),s('text',{x:ml-6,y:y(t)+4,'text-anchor':'end',class:'t'},nf0.format(t))); });
+    const band=pw/months.length, bw=Math.min(24,Math.max(3,band-4)), step=xLabelStep(band,34), hits=[];
+    months.forEach((m,i)=>{
+      const cx=ml+band*i+band/2, x=+(cx-bw/2).toFixed(1); let cum=0, topIdx=-1; const segs=[];
+      CATS.forEach((c,ci)=>{ if(m[c[0]]>0) topIdx=ci; });
+      CATS.forEach((c,ci)=>{
+        const val=m[c[0]]; if(!(val>0)) return;
+        const y1=y(cum), y2=y(cum+val), hh=(y1-y2)-(cum>0?2:0); cum+=val;
+        if(hh<=0.5) return;
+        const seg=s('path',{d:barPath(x,+y2.toFixed(1),bw,+hh.toFixed(1),4,ci===topIdx),class:'mk '+c[2]}); segs.push(seg); svg.append(seg);
+      });
+      if(i===months.length-1&&cum>0) svg.append(s('text',{x:cx,y:y(cum)-6,'text-anchor':'middle',class:'t tv'},brl0(cum)));
+      if((months.length-1-i)%step===0){ const yr=(i===0||m.k.slice(5)==='01')?' '+m.k.slice(2,4):''; svg.append(s('text',{x:cx,y:H-8,'text-anchor':'middle',class:'t'},monAbbr(m.k)+yr)); }
+      hits.push(hitRect(box,tip,segs,ml+band*i,mt,band,ph,monFull(m.k)+' de '+m.k.slice(0,4)+': '+brl.format(cum)+' no total',()=>{
+        const lines=[h('div',{class:'tv'},brl.format(tot(m))),h('div',{class:'tl'},monFull(m.k)+' de '+m.k.slice(0,4))];
+        CATS.forEach(c=>{ if(m[c[0]]>0) lines.push(h('div',{class:'tl'},h('span',{class:'tk',style:'background:var(--'+(c[2]==='s1'?'s1':c[2]==='s2'?'s2':'s3')+')'}),c[1]+': '+brl.format(m[c[0]]))); });
+        return lines;
+      },cx,y(cum)));
+    });
+    hits.forEach(x=>svg.append(x));
+    box.append(svg,tip);
+  };
+}
+function chartCard(title,sub,legend,drawFn,tableEl){
+  const chartBox=h('div',{class:'chart'}); const tbl=h('div',{class:'tblwrap',hidden:true},tableEl);
+  let showT=false;
+  const tgl=h('button',{type:'button',class:'btn ghost sm',onclick:()=>{ showT=!showT; chartBox.hidden=showT; tbl.hidden=!showT; tgl.replaceChildren(icon(showT?'chart':'table',15),showT?'Gráfico':'Tabela'); }},icon('table',15),'Tabela');
+  const card=h('section',{class:'card'},h('div',{class:'chead'},h('div',null,h('h2',null,title),sub?h('p',{class:'sub'},sub):null),tgl),legend,chartBox,tbl);
+  requestAnimationFrame(()=>{ if(chartBox.isConnected) mountChart(chartBox,drawFn); });
+  return card;
+}
+function table(head,rows){
+  return h('table',{class:'tbl'},h('thead',null,h('tr',null,head.map(x=>h('th',{scope:'col'},x)))),h('tbody',null,rows.map(r=>h('tr',null,r.map(c=>h('td',null,c))))));
+}
+
+/* ---------- telas ---------- */
+function planDetail(p,st){
+  const parts=[];
+  if(st.kmLeft!=null) parts.push(st.kmLeft<0?nf0.format(-st.kmLeft)+' km além do prazo':'faltam '+nf0.format(st.kmLeft)+' km');
+  if(st.daysLeft!=null) parts.push(st.daysLeft<0?'venceu há '+(-st.daysLeft)+' '+plural(-st.daysLeft,'dia','dias'):'faltam '+st.daysLeft+' '+plural(st.daysLeft,'dia','dias'));
+  return parts.join(' · ');
+}
+function wearEstimate(kmLeft){
+  if(kmLeft==null) return '';
+  if(kmLeft<500) return ' Pelo ritmo de desgaste, restam menos de 500 km.';
+  return ' Pelo ritmo de desgaste, restam cerca de '+nf0.format(Math.round(kmLeft/500)*500)+' km.';
+}
+function wearText(x){ return 'Com '+nf1.format(x.mm)+' mm de material. O comum é trocar em 3 mm.'+wearEstimate(x.kmLeft); }
+function collectAlerts(v,today){
+  const kmNow=currentKm(v), out=[];
+  v.plans.forEach(p=>{ const st=planStatus(p,v.maint,kmNow,today); if(st.state==='late'||st.state==='soon') out.push({lvl:st.state==='late'?'crit':'warn',tab:'manutencao',title:p.type,pre:st.state==='late'?'Atrasado: ':'Vence em breve: ',detail:planDetail(p,st),frac:st.frac==null?9:st.frac}); });
+  ALLPOS.forEach(a=>{ const t=v.tires[a[0]]; if(!t) return; tireAlerts(t,today).forEach(x=>out.push({lvl:x.lvl,tab:'pneus',title:a[1]+' · Pneu '+t.tag,detail:tireAlertText(x),frac:-1})); });
+  wearAlerts(v,kmNow).forEach(x=>out.push({lvl:x.lvl,tab:'manutencao',title:WEAR_PARTS[x.part].label,detail:wearText(x),frac:x.lvl==='crit'?-3:-0.5}));
+  tireVehicleAlerts(v,kmNow,today).forEach(x=>out.push({lvl:x.lvl,tab:'pneus',title:x.code==='rodizio'?'Rodízio de pneus':'Calibragem dos pneus',detail:tireAlertText(x),frac:x.lvl==='crit'?-2:0}));
+  out.sort((a,b)=>(a.lvl===b.lvl?0:a.lvl==='crit'?-1:1)||a.frac-b.frac);
+  return out;
+}
+function go(tab){ S.tab=tab; saveUI(); render(); }
+function viewDash(v,root){
+  const today=todayStr(), kmNow=currentKm(v);
+  const iv=fuelStats(v.fuel), sum=fuelSummary(iv);
+  const hasTires=Object.values(v.tires).some(Boolean);
+  const hasData=v.fuel.length>0||v.maint.length>0||hasTires;
+  const bb=backupBanner(v); if(bb) root.append(bb);
+  if(v.demo) root.append(h('div',{class:'banner'},h('p',null,'Estes são dados de exemplo, só para você explorar o app.'),h('button',{type:'button',class:'btn sm',onclick:()=>{ const id=v.id; dropVehicle(id).then(()=>openVehicleForm(null)); }},'Apagar exemplo e cadastrar o meu')));
+  const stepsDone=[iv.length>0,v.maint.length>0,hasTires];
+  if(!stepsDone.every(Boolean)){
+    const stp=(done,t,sub,fn)=>h('button',{type:'button',class:'step'+(done?' done':''),onclick:fn},h('span',{class:'chk'},icon('check',14)),h('span',{style:'flex:1;min-width:0'},h('span',{class:'st-t',style:'font-weight:600'},t),h('br'),h('span',{class:'hint'},sub)));
+    root.append(h('section',{class:'card'},h('h2',null,'Primeiros passos'),h('p',{class:'sub'},'Com estes três registros o painel começa a trabalhar por você.'),
+      h('div',{class:'steps',style:'margin-top:6px'},
+        stp(stepsDone[0],'Registre dois abastecimentos de tanque cheio','O consumo é calculado entre um tanque cheio e o próximo. Já tem planilha? Importe o histórico na aba Combustível.',()=>openFuelForm(v)),
+        stp(stepsDone[1],'Informe o último serviço de manutenção','Por exemplo, a última troca de óleo. Os lembretes partem daí.',()=>openMaintForm(v,null,{type:'Troca de óleo e filtro'})),
+        stp(stepsDone[2],'Cadastre os pneus','Medida, DOT e sulco para acompanhar o desgaste.',()=>go('pneus')))));
+  }
+  if(hasData){
+    const al=collectAlerts(v,today);
+    root.append(h('section',{class:'card'},h('h2',null,'Atenção'),
+      al.length?h('div',{class:'alert-list',style:'margin-top:6px'},al.map(a=>h('button',{type:'button',class:'alert '+a.lvl,onclick:()=>go(a.tab)},
+        h('span',{class:'a-ic'},icon(a.lvl==='crit'?'stop':'alert',20)),h('span',{style:'min-width:0'},h('span',{class:'a-t'},a.title),h('br'),h('span',{class:'a-d'},(a.pre||(a.lvl==='crit'?'Urgente: ':'Atenção: '))+a.detail))))):
+        h('div',{style:'margin-top:8px;display:grid;gap:6px'},h('div',null,pill('good','Tudo em dia')),h('p',{class:'sub'},'Nenhum lembrete vencendo e nenhum pneu pedindo atenção.'))));
+    const months=lastMonths(12,today), sp=spendByMonth(v,months), cur=sp[11], prev=sp[10];
+    const tot=m=>m.fuel+m.maint+m.tires;
+    let delta=null;
+    if(tot(prev)>0||tot(cur)>0){ const d=tot(cur)-tot(prev); delta=d===0?'igual ao mês passado':brl0(Math.abs(d))+(d>0?' a mais':' a menos')+' que em '+monAbbr(prev.k); }
+    let lastD=null;
+    if(sum){ const pct=Math.round((sum.last/sum.avg-1)*100); lastD=pct===0?{t:'na média',c:''}:{t:Math.abs(pct)+'% '+(pct>0?'acima':'abaixo')+' da média',c:pct>0?'up':'down',ic:pct>0?'up':'down'}; }
+    const kpi=(l,val,unit,sub,cls,ic)=>h('div',{class:'kpi'},h('div',{class:'k-l'},l),h('div',{class:'k-v num'},val,unit?h('small',null,unit):null),sub?h('div',{class:'k-s '+(cls||'')},ic?icon(ic,13):null,sub):null);
+    root.append(h('div',{class:'kpis'},
+      kpi('Consumo médio',sum?nf1.format(sum.avg):'-',sum?'km/L':null,sum?sum.n+' '+plural(sum.n,'trecho','trechos')+' de tanque cheio':'Precisa de 2 tanques cheios'),
+      kpi('Último trecho',sum?nf1.format(sum.last):'-',sum?'km/L':null,lastD?lastD.t:'Sem dados',lastD&&lastD.c,lastD&&lastD.ic),
+      kpi('Combustível por km',sum?brl.format(sum.perKm):'-',null,sum?'Só o gasto com combustível':'Sem dados'),
+      kpi('Gasto em '+monFull(cur.k),brl0(tot(cur)),null,delta||'Sem gastos registrados')));
+    if(iv.length){
+      const data=iv.slice(-12);
+      const legend=h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--s1)'}),'km/L em cada trecho'),h('span',null,h('i',{class:'ln',style:'background:var(--ink2)'}),'média geral, '+nf1.format(sum.avg)));
+      root.append(chartCard('Consumo por trecho','Do tanque cheio anterior até o tanque cheio de cada data',legend,drawConsumption(data,sum.avg),
+        table(['Data','Combustível','Distância','Litros','Consumo'],data.map(d=>[fmtDate(d.date),fuelName(d.fuel),nf0.format(d.dist)+' km',nf1.format(d.liters)+' L',nf1.format(d.kmpl)+' km/L']))));
+    }
+    const sum12=sp.reduce((a,m)=>a+tot(m),0);
+    if(sum12>0){
+      const legend=h('div',{class:'legend'},CATS.map(c=>h('span',null,h('i',{style:'background:var(--'+c[2]+')'}),c[1])));
+      root.append(chartCard('Gasto por mês','Últimos 12 meses, em reais. Total: '+brl.format(sum12),legend,drawSpend(sp),
+        table(['Mês','Combustível','Manutenção','Pneus','Total'],sp.filter(m=>tot(m)>0).map(m=>[monAbbr(m.k)+'/'+m.k.slice(2,4),brl.format(m.fuel),brl.format(m.maint),brl.format(m.tires),brl.format(tot(m))]))));
+    }
+  }
+}
+function viewFuel(v,root){
+  const iv=fuelStats(v.fuel), st=new Map(iv.map(x=>[x.id,x]));
+  const all=[...v.fuel].sort(byDateDesc);
+  root.append(h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:()=>openFuelForm(v)},icon('plus',16),'Novo abastecimento'),h('button',{type:'button',class:'btn',onclick:()=>openFuelImport(v)},icon('table',16),'Importar da planilha')));
+  // etanol x gasolina
+  const lastPrice=k=>{ const f=all.find(x=>x.fuel===k); return f?f.total/f.liters:null; };
+  const r=fuelRatio(iv), th=r?r.ratio:0.7;
+  const pe=lastPrice('etanol'), pg=lastPrice('gasolina');
+  const cE=I('c-e',{inputmode:'decimal',placeholder:'0,00',value:pe?fmtIn(pe.toFixed(2)):''});
+  const cG=I('c-g',{inputmode:'decimal',placeholder:'0,00',value:pg?fmtIn(pg.toFixed(2)):''});
+  const out=h('div',{class:'calc-out'});
+  const upd=()=>{
+    const e=parseDec(cE.value), g=parseDec(cG.value);
+    if(!(e>0&&g>0)){ out.replaceChildren(h('span',{class:'muted'},'Digite os dois preços para comparar.')); return; }
+    const ratio=e/g, ok=ratio<=th;
+    out.replaceChildren(pill(ok?'good':'info',ok?'Etanol compensa':'Gasolina compensa'),h('span',null,'O etanol custa '+Math.round(ratio*100)+'% do preço da gasolina. O ponto de virada é '+Math.round(th*100)+'%.'));
+  };
+  cE.addEventListener('input',upd); cG.addEventListener('input',upd); upd();
+  root.append(h('section',{class:'card calc'},h('div',null,h('h2',null,'Etanol ou gasolina?'),h('p',{class:'sub'},r?'O ponto de virada vem do consumo real do seu carro ('+r.nE+' trechos com etanol e '+r.nG+' com gasolina).':'Uso a regra geral de 70%. Com 2 ou mais trechos de cada combustível, passo a usar o consumo real do seu carro.')),
+    ROW2(F('c-e','Etanol (R$/L)',cE),F('c-g','Gasolina (R$/L)',cG)),out));
+  const lim=S.showAllFuel?all.length:25;
+  const card=h('section',{class:'card'},h('div',{class:'chead',style:'margin-bottom:0'},h('div',null,h('h2',null,'Histórico'),h('p',{class:'sub'},all.length+' '+plural(all.length,'abastecimento','abastecimentos')))));
+  if(!all.length) card.append(h('div',{class:'empty-note'},'Nenhum abastecimento ainda. Toque em «Novo abastecimento» e informe o km do painel, os litros e o valor.'));
+  else {
+    card.append(h('div',{class:'list',style:'margin-top:6px'},all.slice(0,lim).map(f=>{
+      const s2=st.get(f.id);
+      return h('button',{type:'button',class:'row',onclick:()=>openFuelForm(v,f)},
+        h('div',{class:'r-main'},h('div',{class:'r-title'},fmtDate(f.date),h('span',{class:'muted',style:'font-weight:500'},fuelName(f.fuel)),f.full?null:pill('info','parcial')),
+          h('div',{class:'r-sub num'},fmtKm(f.km)+' km · '+nf2.format(f.liters)+' L · '+brl.format(f.total/f.liters)+'/L'+(f.station?' · '+f.station:''))),
+        h('div',{class:'r-side'},h('div',{class:'r-val'},brl.format(f.total)),h('div',{class:'r-sub num'},s2?nf1.format(s2.kmpl)+' km/L':'')));
+    })));
+    if(all.length>25&&!S.showAllFuel) card.append(h('div',{style:'margin-top:10px'},h('button',{type:'button',class:'btn sm',onclick:()=>{ S.showAllFuel=true; render(); }},'Mostrar todos ('+all.length+')')));
+  }
+  root.append(card);
+}
+function viewMaint(v,root){
+  const today=todayStr(), kmNow=currentKm(v);
+  root.append(h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:()=>openMaintForm(v)},icon('plus',16),'Registrar serviço'),h('button',{type:'button',class:'btn',onclick:()=>openPlans(v)},'Editar lembretes')));
+  const wc=h('section',{class:'card'},h('h2',null,'Desgaste das pastilhas'),h('p',{class:'sub'},'Meça a espessura de vez em quando. É o dado que melhor diz a hora de trocar.'));
+  wc.append(h('div',{class:'list',style:'margin-top:6px'},Object.keys(WEAR_PARTS).map(part=>{
+    const st=wearStatus(v,part,kmNow);
+    const badge=!st?pill('info','Sem medição'):st.lvl==='crit'?pill('crit','Trocar'):st.lvl==='warn'?pill('warn','Planeje a troca'):pill('good','Bom estado');
+    const line=!st?'Toque para registrar a primeira medição.':'Última: '+nf1.format(st.last.mm)+' mm · '+fmtDate(st.last.date)+(st.kmLeft!=null?'.'+wearEstimate(st.kmLeft):'');
+    return h('button',{type:'button',class:'row',onclick:()=>openWear(v,part)},h('div',{class:'r-main'},h('div',{class:'r-title'},WEAR_PARTS[part].label,badge),h('div',{class:'r-sub num'},line)),h('span',{class:'tadd'},icon('plus',15),'Medir'));
+  })));
+  root.append(wc);
+  const items=v.plans.map(p=>({p:p,st:planStatus(p,v.maint,kmNow,today)})).sort((a,b)=>a.st.rank-b.st.rank||(a.st.frac==null?9e9:a.st.frac)-(b.st.frac==null?9e9:b.st.frac));
+  const rc=h('section',{class:'card'},h('h2',null,'Lembretes'),h('p',{class:'sub'},'Calculados a partir do último registro de cada serviço e do km atual, '+nf0.format(kmNow)+'.'));
+  if(!items.length) rc.append(h('div',{class:'empty-note'},'Você ainda não tem lembretes. Crie um ao registrar um serviço ou em «Editar lembretes».'));
+  else rc.append(h('div',{class:'list',style:'margin-top:6px'},items.map(({p,st})=>{
+    const badge=st.state==='late'?pill('crit','Atrasado'):st.state==='soon'?pill('warn','Vence em breve'):st.state==='ok'?pill('good','Em dia'):pill('info','Sem registro');
+    const lines=st.state==='none'?'Informe quando foi feito pela última vez.':'Último: '+fmtDate(st.last.date)+' · '+nf0.format(st.last.km)+' km. '+planDetail(p,st)+'.';
+    const every=[p.everyKm?'a cada '+nf0.format(p.everyKm)+' km':null,p.everyMonths?'a cada '+p.everyMonths+' '+plural(p.everyMonths,'mês','meses'):null].filter(Boolean).join(' ou ');
+    return h('button',{type:'button',class:'row',onclick:()=>openMaintForm(v,null,{type:p.type})},h('div',{class:'r-main'},h('div',{class:'r-title'},p.type,badge),h('div',{class:'r-sub'},lines),h('div',{class:'r-sub'},'Repete '+every)),h('span',{class:'tadd'},icon('plus',15),'Registrar'));
+  })));
+  root.append(rc);
+  const hist=[...v.maint].sort(byDateDesc); const total=hist.reduce((a,m)=>a+(m.cost||0),0);
+  const hc=h('section',{class:'card'},h('h2',null,'Histórico'),h('p',{class:'sub'},hist.length+' '+plural(hist.length,'serviço','serviços')+(total>0?' · '+brl.format(total)+' no total':'')));
+  if(!hist.length) hc.append(h('div',{class:'empty-note'},'Nenhum serviço registrado. Comece pela última troca de óleo.'));
+  else hc.append(h('div',{class:'list',style:'margin-top:6px'},hist.map(m=>h('button',{type:'button',class:'row',onclick:()=>openMaintForm(v,m)},
+    h('div',{class:'r-main'},h('div',{class:'r-title'},m.type),h('div',{class:'r-sub num'},fmtDate(m.date)+' · '+nf0.format(m.km)+' km'+(m.shop?' · '+m.shop:'')),m.notes?h('div',{class:'r-sub'},m.notes):null),
+    h('div',{class:'r-side'},m.cost>0?h('div',{class:'r-val'},brl.format(m.cost)):null)))));
+  root.append(hc);
+}
+function tireCard(v,pos,label,today){
+  const t=v.tires[pos], kmNow=currentKm(v);
+  const c=h('button',{type:'button',class:'tirecard'+(pos==='ES'?' spare':''),onclick:()=>openTire(v,pos)},h('div',{class:'tpos'},h('span',null,label),t&&t.tag?h('span',{class:'tagb'},'Pneu '+t.tag):null));
+  if(!t){ c.append(h('div',{class:'tname muted'},'Sem pneu cadastrado'),h('div',{class:'tadd'},icon('plus',16),'Cadastrar')); return c; }
+  const g=tireGroove(t), al=tireAlerts(t,today), d=dotInfo(t.dot,today);
+  c.append(h('div',{class:'tname'},(t.brand||'Pneu')+(t.size?' · '+t.size:'')));
+  if(g){
+    const lvl=g.mm<=1.6?'crit':g.mm<=3?'warn':'good'; const bar=h('span');
+    bar.style.width=Math.round(Math.max(0.04,Math.min(1,g.mm/(t.groove0||8)))*100)+'%';
+    c.append(h('div',{class:'gauge '+lvl,role:'img','aria-label':'Sulco de '+nf1.format(g.mm)+' milímetros'},bar),h('div',{class:'tmeta num'},'Sulco '+nf1.format(g.mm)+' mm'));
+  } else c.append(h('div',{class:'tmeta'},'Sulco ainda não medido'));
+  const meta=[]; if(pos!=='ES'&&t.installKm!=null) meta.push(nf0.format(Math.max(0,kmNow-t.installKm))+' km rodados'); if(d) meta.push(nf1.format(d.ageYears)+' anos de fábrica');
+  if(meta.length) c.append(h('div',{class:'tmeta num'},meta.join(' · ')));
+  const worst=al.find(a=>a.lvl==='crit')||al[0];
+  if(worst) c.append(h('div',null,pill(worst.lvl,worst.lvl==='crit'?'Trocar':'Atenção')));
+  else if(g||d) c.append(h('div',null,pill('good','Ok')));
+  return c;
+}
+function viewTires(v,root){
+  const today=todayStr(), kmNow=currentKm(v);
+  root.append(h('div',{class:'front-tag'},'Frente do carro'));
+  root.append(h('div',{class:'tiregrid'},['DE','DD','TE','TD'].map(p=>tireCard(v,p,posName(p),today))));
+  root.append(h('div',{class:'tiregrid'},tireCard(v,'ES','Estepe',today)));
+  const ev=[...v.tireEvents].sort(byDateDesc);
+  const last=k=>ev.find(e=>e.kind===k);
+  const lr=last('rodizio'), lc=last('calibragem');
+  const sub=(e,txt)=>e?fmtDate(e.date)+' · '+nf0.format(e.km)+' km'+(e.psiF||e.psiR?' · '+[e.psiF?'diant. '+fmtIn(e.psiF)+' psi':null,e.psiR?'tras. '+fmtIn(e.psiR)+' psi':null].filter(Boolean).join(', '):''):txt;
+  const evCard=h('section',{class:'card'},h('h2',null,'Rodízio e calibragem'),
+    h('div',{class:'list',style:'margin-top:6px'},
+      h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title'},'Último rodízio'),h('div',{class:'r-sub num'},sub(lr,'Nunca registrado. O comum é a cada 10.000 km.')),lr&&lr.moves&&lr.moves.length?h('div',{class:'r-sub'},lr.moves.map(moveText).join(' · ')):null),h('button',{type:'button',class:'btn sm',onclick:()=>eventForm(v,'rodizio')},'Registrar')),
+      h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title'},'Última calibragem'),h('div',{class:'r-sub num'},sub(lc,'Nunca registrada. Confira a pressão a cada 15 dias.'))),h('button',{type:'button',class:'btn sm',onclick:()=>eventForm(v,'calibragem')},'Registrar'))));
+  if(ev.length>0){
+    evCard.append(h('div',{class:'lbl',style:'margin-top:12px'},'Registros'),h('div',{class:'list'},ev.slice(0,12).map(e=>h('button',{type:'button',class:'row',onclick:()=>eventForm(v,e.kind,e)},
+      h('div',{class:'r-main'},h('div',{class:'r-title'},e.kind==='rodizio'?'Rodízio':'Calibragem'),h('div',{class:'r-sub num'},sub(e,'')+(e.moves&&e.moves.length?' · '+e.moves.map(moveText).join(', '):'')+(e.note?' · '+e.note:'')))))));
+  }
+  root.append(evCard);
+  const hist=[...v.tireHistory].sort((a,b)=>String(b.removeDate).localeCompare(String(a.removeDate)));
+  if(hist.length){
+    root.append(h('section',{class:'card'},h('h2',null,'Pneus que já saíram'),h('p',{class:'sub'},'Quanto cada um rodou e quanto custou por 1.000 km.'),
+      h('div',{class:'list',style:'margin-top:6px'},hist.map(x=>{
+        const life=(typeof x.installKm==='number'&&typeof x.removeKm==='number')?x.removeKm-x.installKm:null;
+        const per=(life>0&&x.price>0)?x.price/life*1000:null;
+        return h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title'},(x.tag?'Pneu '+x.tag+' · ':'')+posName(x.pos)+' · '+(x.brand||'Pneu')),h('div',{class:'r-sub num'},[x.installDate?fmtDate(x.installDate):null,fmtDate(x.removeDate)].filter(Boolean).join(' a ')+(life!=null?' · '+nf0.format(life)+' km':''))),
+          h('div',{class:'r-side'},per?h('div',{class:'r-val'},brl.format(per)):null,per?h('div',{class:'r-sub'},'por 1.000 km'):null));
+      }))));
+  }
+}
+
+/* ---------- montagem da página ---------- */
+const TABS=[['painel','Painel','gauge'],['combustivel','Combustível','fuel'],['manutencao','Manutenção','wrench'],['pneus','Pneus','tire']];
+function renderTop(v){
+  const box=$('#vcard'); box.replaceChildren();
+  if(!v) return;
+  box.append(h('section',{class:'vcard'},
+    h('button',{type:'button',class:'vhead','aria-label':'Trocar de veículo. Em uso: '+v.name,onclick:openVehicles},plateEl(v.plate),h('span',{class:'vname'},v.name,h('span',{class:'vsub'},S.vehicles.length>1?S.vehicles.length+' veículos, toque para trocar':'Gerenciar veículos')),icon('chev',18)),
+    odoEl(currentKm(v)),
+    h('div',{class:'vfoot'},(()=>{ const si=syncInfo(); const cls='sync'+(si.warn?' local':''); return si.btn?h('button',{type:'button',class:cls,onclick:openStorage,'aria-label':si.t+'. Abrir opções de armazenamento'},h('i'),h('span',null,si.t)):h('span',{class:cls},h('i'),si.t); })(),h('button',{type:'button',class:'btn sm',onclick:()=>openKmForm(v)},'Atualizar km'))));
+}
+function renderTabs(v){
+  const nav=$('#tabs'); nav.replaceChildren();
+  if(!v) return;
+  nav.append(h('div',{class:'seg',role:'group'},TABS.map(t=>h('button',{type:'button',class:'tab','aria-current':S.tab===t[0]?'page':null,onclick:()=>go(t[0])},icon(t[2],20),h('span',null,t[1])))));
+}
+function emptyCard(){
+  return h('section',{class:'card',style:'display:grid;gap:12px'},
+    h('div',null,h('h2',null,'Seu carro, sem planilha'),h('p',{class:'sub',style:'margin-top:4px'},'Aqui vão aparecer o consumo médio, os avisos de revisão vencendo e a situação dos pneus. Comece cadastrando o veículo.')),
+    h('div',{class:'actions'},h('button',{type:'button',class:'btn primary',onclick:()=>openVehicleForm(null)},icon('plus',16),'Cadastrar meu veículo'),h('button',{type:'button',class:'btn',onclick:loadDemo},'Ver com dados de exemplo'),SH.ok?h('button',{type:'button',class:'btn',onclick:openShConnectOnly},'Já uso em outro aparelho (Google Sheets)'):null));
+}
+function render(){
+  disposeCharts();
+  if(S.ready&&FILE.state==='pending'){ renderPending(); return; }
+  const v=S.ready?V():null;
+  renderTop(v); renderTabs(v);
+  const view=$('#view'); view.replaceChildren();
+  if(!S.ready){ view.append(h('section',{class:'card'},h('p',{class:'muted'},'Carregando seus dados...'))); return; }
+  if(!v){ view.append(emptyCard()); return; }
+  ({painel:viewDash,combustivel:viewFuel,manutencao:viewMaint,pneus:viewTires}[S.tab]||viewDash)(v,view);
+}
+function boot(){
+  $('#logo').append(icon('car',19));
+  $('#btn-more').append(icon('more',22));
+  $('#btn-more').addEventListener('click',openMore);
+  const modal=$('#modal');
+  modal.addEventListener('pointerdown',e=>{ downOnOverlay=(e.target===modal); });
+  modal.addEventListener('click',e=>{ if(e.target===modal&&downOnOverlay) closeModal(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!modal.hidden) closeModal(); });
+  init();
+}
+boot();
+})();
+</script>
+</body>
+</html>
