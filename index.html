@@ -15,7 +15,7 @@
   --bg:#eceff3; --card:#fcfdfe; --ink:#0f1722; --ink2:#4a5565; --muted:#657083;
   --line:#dde2e8; --axis:#c2c9d3; --wash:rgba(15,23,34,.045);
   --accent:#1f55c4; --on-accent:#ffffff; --accent-soft:#e2eafa;
-  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#4a3aa7;
   --good:#0b7a3b; --good-bg:#dcf2e4; --warn:#8a5300; --warn-bg:#fdebc6; --crit:#b42318; --crit-bg:#fde2df; --info:#35527f; --info-bg:#e3eaf5;
   --odo-bg:#10151c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
   --ff-display:'Big Shoulders Display','Arial Narrow','Roboto Condensed',sans-serif;
@@ -26,7 +26,7 @@
     --bg:#0b1017; --card:#141c26; --ink:#e8edf4; --ink2:#aab4c3; --muted:#8893a3;
     --line:#243040; --axis:#364458; --wash:rgba(255,255,255,.06);
     --accent:#6b9bff; --on-accent:#08111f; --accent-soft:#1c2a45;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9;
     --good:#4fc07d; --good-bg:#16301f; --warn:#f2b84b; --warn-bg:#3a2c0e; --crit:#ff8a80; --crit-bg:#3d1816; --info:#9fb8e6; --info-bg:#1b2840;
     --odo-bg:#05080c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
     color-scheme:dark;
@@ -36,7 +36,7 @@
   --bg:#0b1017; --card:#141c26; --ink:#e8edf4; --ink2:#aab4c3; --muted:#8893a3;
   --line:#243040; --axis:#364458; --wash:rgba(255,255,255,.06);
   --accent:#6b9bff; --on-accent:#08111f; --accent-soft:#1c2a45;
-  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#9085e9;
   --good:#4fc07d; --good-bg:#16301f; --warn:#f2b84b; --warn-bg:#3a2c0e; --crit:#ff8a80; --crit-bg:#3d1816; --info:#9fb8e6; --info-bg:#1b2840;
   --odo-bg:#05080c; --odo-fg:#f3f5f8; --odo-edge:#2b3440;
   color-scheme:dark;
@@ -129,6 +129,7 @@ button.sync span{text-decoration:underline dotted;text-underline-offset:3px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
 .kpi .k-l{font-size:12.5px;color:var(--muted);font-weight:500}
 .kpi .k-v{font-family:var(--ff-display);font-weight:700;font-size:34px;line-height:1.05;margin-top:4px;letter-spacing:.2px}
+.kpis.tight .k-v{font-size:clamp(20px,6.2vw,30px);white-space:nowrap}
 .kpi .k-v small{font-family:var(--ff-body);font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
 .kpi .k-s{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .k-s.up{color:var(--good)}.k-s.down{color:var(--warn)}
@@ -156,7 +157,7 @@ button.sync span{text-decoration:underline dotted;text-underline-offset:3px}
 .chart .grid{stroke:var(--line);stroke-width:1}
 .chart .axis{stroke:var(--axis);stroke-width:1}
 .chart .avg{stroke:var(--ink2);stroke-width:2;stroke-linecap:round}
-.chart .s1{fill:var(--s1)}.chart .s2{fill:var(--s2)}.chart .s3{fill:var(--s3)}
+.chart .s1{fill:var(--s1)}.chart .s2{fill:var(--s2)}.chart .s3{fill:var(--s3)}.chart .s4{fill:var(--s4)}
 .chart .mk{transition:filter .12s}
 .chart .mk.hov{filter:brightness(1.14)}
 .chart .hit{fill:transparent;cursor:default}
@@ -302,7 +303,9 @@ const TAGS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 function normVehicle(v){
   const o=v||{};
   o.name=o.name||'Veículo'; o.plate=o.plate||''; o.fuelDefault=o.fuelDefault||'gasolina'; o.kmNow=+o.kmNow||0;
-  ['fuel','maint','plans','tireHistory','tireEvents','wear'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+  ['fuel','maint','plans','tireHistory','tireEvents','wear','expenses','valuations'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+  o.depRate=(typeof o.depRate==='number'&&o.depRate>=0&&o.depRate<=60)?o.depRate:null;
+  o.tireLifeKm=(typeof o.tireLifeKm==='number'&&o.tireLifeKm>=5000)?o.tireLifeKm:null;
   o.tires=Object.assign({DE:null,DD:null,TE:null,TD:null,ES:null},o.tires||{});
   Object.keys(o.tires).forEach(k=>{ if(o.tires[k]&&!Array.isArray(o.tires[k].grooves)) o.tires[k].grooves=[]; });
   const used=new Set(); const POSL=['DE','DD','TE','TD','ES'];
@@ -357,14 +360,71 @@ function lastMonths(n,today){
   return out;
 }
 function spendByMonth(v,months){
-  const res=months.map(k=>({k:k,fuel:0,maint:0,tires:0})); const ix={}; res.forEach((r,i)=>ix[r.k]=i);
+  const res=months.map(k=>({k:k,fuel:0,maint:0,tires:0,fixed:0})); const ix={}; res.forEach((r,i)=>ix[r.k]=i);
   const add=(date,key,val)=>{ if(!date||!(val>0)) return; const i=ix[String(date).slice(0,7)]; if(i!=null) res[i][key]+=val; };
   (v.fuel||[]).forEach(f=>add(f.date,'fuel',f.total));
   (v.maint||[]).forEach(m=>add(m.date,'maint',m.cost));
   Object.values(v.tires||{}).forEach(t=>{ if(t) add(t.installDate,'tires',t.price); });
   (v.tireHistory||[]).forEach(t=>add(t.installDate,'tires',t.price));
+  (v.expenses||[]).forEach(x=>add(x.date,'fixed',x.cost));
   return res;
 }
+const EXP_TYPES=[['IPVA','IPVA'],['Licenciamento','Licenciamento'],['Seguro','Seguro'],['Outra','Outra despesa']];
+const DEP_RATE_DEFAULT=10, TIRE_LIFE_DEFAULT=40000;
+function valueAt(vals,rate,day){
+  if(!vals.length) return null;
+  const f=vals[0], l=vals[vals.length-1], r=Math.min(0.6,Math.max(0,rate));
+  if(day<=f.d) return {v:f.val/Math.pow(1-r,(f.d-day)/365),inRange:day===f.d};
+  if(day>=l.d) return {v:l.val*Math.pow(1-r,(day-l.d)/365),inRange:day===l.d};
+  let a=f,b=l; for(let i=0;i<vals.length-1;i++){ if(vals[i].d<=day&&vals[i+1].d>=day){ a=vals[i]; b=vals[i+1]; break; } }
+  return {v:a.val+(b.val-a.val)*(day-a.d)/(b.d-a.d),inRange:true};
+}
+function tireWindowCost(v,startKm,endKm,life){
+  let cost=0, noKm=0;
+  const ov=(a,b)=>Math.max(0,Math.min(b,endKm)-Math.max(a,startKm));
+  Object.keys(v.tires||{}).forEach(pos=>{ const t=v.tires[pos]; if(!t||pos==='ES'||!(t.price>0)) return;
+    if(typeof t.installKm!=='number'){ noKm++; return; }
+    cost+=t.price*ov(t.installKm,t.installKm+life)/life; });
+  (v.tireHistory||[]).forEach(t=>{ if(!(t.price>0)) return;
+    if(typeof t.installKm!=='number'||typeof t.removeKm!=='number'||!(t.removeKm>t.installKm)){ noKm++; return; }
+    cost+=t.price*ov(t.installKm,t.removeKm)/(t.removeKm-t.installKm); });
+  return {cost:cost,noKm:noKm};
+}
+function costWindow(v,today){
+  const cut=addMonths(today,-12), dToday=dayNum(today), endKm=currentKm(v);
+  const pts=[]; const P=(d,k)=>{ if(d&&validDateStr(d)&&typeof k==='number'&&isFinite(k)&&k>0) pts.push([dayNum(d),k,d]); };
+  (v.fuel||[]).forEach(x=>P(x.date,x.km)); (v.maint||[]).forEach(x=>P(x.date,x.km)); (v.tireEvents||[]).forEach(x=>P(x.date,x.km)); (v.wear||[]).forEach(x=>P(x.date,x.km));
+  Object.values(v.tires||{}).forEach(t=>{ if(t){ P(t.installDate,t.installKm); (t.grooves||[]).forEach(g=>P(g.date,g.km)); } });
+  (v.tireHistory||[]).forEach(t=>{ P(t.installDate,t.installKm); P(t.removeDate,t.removeKm); });
+  if(!pts.length||!(endKm>0)) return null;
+  pts.sort((a,b)=>a[0]-b[0]||a[1]-b[1]); pts.push([dToday,endKm,today]);
+  const cutDay=dayNum(cut); let truncated=false, lo=cut, startKm;
+  if(pts[0][0]>cutDay){ truncated=true; lo=pts[0][2]; startKm=pts[0][1]; }
+  else {
+    let a=pts[0], b=null; for(const q of pts){ if(q[0]<=cutDay) a=q; else { b=q; break; } }
+    if(!b||a[0]===cutDay) startKm=a[1]; else startKm=a[1]+(b[1]-a[1])*(cutDay-a[0])/(b[0]-a[0]);
+  }
+  const inWin=d=>d&&validDateStr(d)&&(truncated?d>=lo:d>lo)&&d<=today;
+  const parts={fuel:0,maint:0,tires:0,IPVA:0,Licenciamento:0,Seguro:0,Outra:0,dep:0};
+  (v.fuel||[]).forEach(x=>{ if(inWin(x.date)&&x.total>0) parts.fuel+=x.total; });
+  (v.maint||[]).forEach(x=>{ if(inWin(x.date)&&x.cost>0) parts.maint+=x.cost; });
+  (v.expenses||[]).forEach(x=>{ if(inWin(x.date)&&x.cost>0){ const k=['IPVA','Licenciamento','Seguro'].indexOf(x.type)>=0?x.type:'Outra'; parts[k]+=x.cost; } });
+  const life=v.tireLifeKm||TIRE_LIFE_DEFAULT;
+  const tc=tireWindowCost(v,startKm,endKm,life); parts.tires=tc.cost;
+  const op=parts.fuel+parts.maint+parts.tires+parts.IPVA+parts.Licenciamento+parts.Seguro+parts.Outra;
+  const rate=(v.depRate!=null?v.depRate:DEP_RATE_DEFAULT)/100;
+  const vals=(v.valuations||[]).filter(x=>x&&validDateStr(x.date)&&x.value>0).map(x=>({d:dayNum(x.date),val:x.value})).sort((a,b)=>a.d-b.d);
+  let dep=null;
+  if(vals.length){
+    const a=valueAt(vals,rate,dayNum(lo)), b=valueAt(vals,rate,dToday);
+    dep={vStart:a.v,vEnd:b.v,estimated:!(a.inRange&&b.inRange),rate:rate*100,loss:Math.max(0,a.v-b.v),raw:a.v-b.v};
+    parts.dep=dep.loss;
+  }
+  const km=endKm-startKm, total=op+parts.dep;
+  return {from:lo,truncated:truncated,days:dToday-dayNum(lo),km:km,total:total,op:op,parts:parts,dep:dep,tireLife:life,tireNoKm:tc.noKm,
+    perKm:km>=100&&total>0?total/km:null, perKmOp:km>=100&&op>0?op/km:null};
+}
+function validDateStr(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(dayNum(d)); }
 function planStatus(plan,maint,kmNow,today){
   const key=norm(plan.type);
   const recs=maint.filter(m=>norm(m.type)===key).sort((a,b)=>String(b.date).localeCompare(String(a.date))||b.km-a.km);
@@ -993,7 +1053,11 @@ function shTables(){
     });
     [...(v.wear||[])].sort((a,b)=>D8(a.date,b.date)||a.km-b.km).forEach(w=>wearRows.push([v.name,(WEAR_PARTS[w.part]||{label:w.part}).label,w.date,w.km,w.mm,w.fresh?'sim':'']));
   });
-  return {'App Abastecimentos':fuelRows,'App Manutenção':mRows,'App Pneus':tireRows,'App Rodízios':rodRows,'App Sulcos':grooveRows,'App Pastilhas':wearRows};
+  const valRows=[['Veículo','Data da consulta','Valor de mercado']];
+  S.vehicles.forEach(v=>[...(v.valuations||[])].sort((a,b)=>D8(a.date,b.date)).forEach(x=>valRows.push([v.name,x.date,x.value])));
+  const expRows=[['Veículo','Data','Tipo','Valor','Observações']];
+  S.vehicles.forEach(v=>[...(v.expenses||[])].sort((a,b)=>D8(a.date,b.date)).forEach(x=>expRows.push([v.name,x.date,(EXP_TYPES.find(t=>t[0]===x.type)||[0,'Outra despesa'])[1],x.cost,x.notes||''])));
+  return {'App Abastecimentos':fuelRows,'App Manutenção':mRows,'App Despesas':expRows,'App Valores':valRows,'App Pneus':tireRows,'App Rodízios':rodRows,'App Sulcos':grooveRows,'App Pastilhas':wearRows};
 }
 function shSay(){ const t=syncInfo().t; if(t!==SH.txt){ SH.txt=t; try{ render(); }catch(e){} } }
 async function shPush(force,opt){
@@ -1297,6 +1361,55 @@ function openFuelForm(v,rec){
 }
 
 /* manutenção */
+function openEstimates(v){
+  const vals=[...v.valuations].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const date=I('ev-date',{type:'date',value:todayStr()});
+  const val=I('ev-val',{inputmode:'decimal',placeholder:'Ex.: 62.500,00'});
+  const rate=I('ev-rate',{inputmode:'decimal',value:fmtIn(v.depRate!=null?v.depRate:DEP_RATE_DEFAULT),placeholder:'10'});
+  const life=I('ev-life',{inputmode:'numeric',value:String(v.tireLifeKm||TIRE_LIFE_DEFAULT),placeholder:'40000'});
+  const list=vals.length?h('div',{class:'list'},vals.map(x=>h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title'},brl.format(x.value)),h('div',{class:'r-sub num'},fmtDate(x.date))),
+    h('button',{type:'button',class:'btn sm ghost danger',onclick:()=>{ v.valuations=v.valuations.filter(y=>y.id!==x.id); persist(v.id); openEstimates(v); render(); }},'Apagar')))):h('p',{class:'hint'},'Nenhum valor informado ainda.');
+  const form=h('form',{novalidate:true},
+    h('p',{class:'hint'},'Valor de mercado é o que o carro valeria numa venda, por exemplo o da tabela FIPE para o seu modelo e ano. Com dois valores de datas diferentes (hoje e um ano atrás, a FIPE mostra o histórico), a depreciação sai do que você informou. Com um só, uso a taxa de perda anual abaixo.'),
+    h('div',{class:'lbl'},'Valores informados'),list,
+    h('div',{class:'lbl'},'Adicionar um valor'),ROW2(F('ev-date','Data da consulta',date),F('ev-val','Valor de mercado (R$)',val)),
+    h('div',{class:'lbl'},'Estimativas'),
+    ROW2(F('ev-rate','Perda de valor por ano (%)',rate,'Só vale quando faltar valor informado. Carros usados costumam perder de 5% a 15% ao ano.'),F('ev-life','Vida útil dos pneus (km)',life,'Pneus novos duram de 30.000 a 50.000 km, conforme o uso.')),
+    submitBar('Salvar'));
+  wireForm(form,()=>{
+    const r=parseDec(rate.value); if(isNaN(r)||r<0||r>60) return {error:'A perda de valor por ano precisa estar entre 0 e 60.'};
+    const l=parseKm(life.value); if(isNaN(l)||l<5000||l>150000) return {error:'Informe a vida útil dos pneus entre 5.000 e 150.000 km.'};
+    if(val.value.trim()){
+      const x=parseDec(val.value); if(isNaN(x)||!(x>0)) return {error:'Valor de mercado inválido.'};
+      if(!validDate(date.value)) return {error:'Informe a data da consulta.'};
+      v.valuations=v.valuations.filter(y=>y.date!==date.value); v.valuations.push({id:'val_'+uid(),date:date.value,value:x});
+    }
+    v.depRate=r; v.tireLifeKm=l; closeModal(); commit(v,'Estimativas salvas.'); return {ok:true};
+  });
+  openModal('Valor do carro e estimativas',form,false);
+}
+function openExpenseForm(v,rec,pre){
+  const edit=!!rec;
+  const sel=SEL('xf-type',EXP_TYPES.map(t=>[t[0],t[1]]),edit?(rec.type||'Outra'):((pre&&pre.type)||'IPVA'));
+  const date=I('xf-date',{type:'date',value:edit?rec.date:todayStr()});
+  const cost=I('xf-cost',{inputmode:'decimal',placeholder:'0,00',value:edit&&rec.cost?fmtIn(rec.cost.toFixed(2)):''});
+  const notes=h('textarea',{id:'xf-notes',class:'inp',maxlength:'300',placeholder:'Ano de referência, seguradora, parcela 2 de 4...'},edit?(rec.notes||''):'');
+  const form=h('form',{novalidate:true},
+    F('xf-type','Tipo',sel),ROW2(F('xf-date','Data do pagamento',date),F('xf-cost','Valor pago (R$)',cost)),
+    F('xf-notes','Observações',notes,'Se pagou em parcelas, registre cada parcela na data em que pagou.'),
+    submitBar(edit?'Salvar alterações':'Salvar despesa',edit?deleteBlock('Apagar',()=>{ v.expenses=v.expenses.filter(x=>x.id!==rec.id); closeModal(); commit(v,'Despesa apagada.'); }):null));
+  wireForm(form,ack=>{
+    if(!validDate(date.value)) return {error:'Informe a data do pagamento.'};
+    const c=parseDec(cost.value); if(isNaN(c)||!(c>0)) return {error:'Informe o valor pago, maior que zero.'};
+    if(c>200000&&!ack) return {warn:['Valor muito alto: '+brl.format(c)+'. Confira se a vírgula está no lugar certo.']};
+    const dup=v.expenses.find(x=>(!edit||x.id!==rec.id)&&x.type===sel.value&&x.date===date.value&&Math.abs(x.cost-c)<0.005);
+    if(dup&&!ack) return {warn:['Já existe uma despesa igual (mesmo tipo, data e valor). Salvar de novo vai duplicar.']};
+    const data={type:sel.value,date:date.value,cost:c,notes:notes.value.trim()};
+    if(edit) Object.assign(rec,data); else v.expenses.push(Object.assign({id:'x_'+uid()},data));
+    closeModal(); commit(v,edit?'Despesa atualizada.':'Despesa salva.'); return {ok:true};
+  });
+  openModal(edit?'Editar despesa':'Nova despesa',form,false);
+}
 function openMaintForm(v,rec,pre){
   const edit=!!rec;
   const date=I('mf-date',{type:'date',value:edit?rec.date:todayStr()});
@@ -1781,11 +1894,11 @@ function drawConsumption(data,avg){
     box.append(svg,tip);
   };
 }
-const CATS=[['fuel','Combustível','s1'],['maint','Manutenção','s2'],['tires','Pneus','s3']];
+const CATS=[['fuel','Combustível','s1'],['maint','Manutenção','s2'],['tires','Pneus','s3'],['fixed','IPVA, seguro e outras','s4']];
 function drawSpend(months){
   return (box,w)=>{
     const H=210,ml=40,mr=10,mt=22,mb=26,pw=w-ml-mr,ph=H-mt-mb,base=mt+ph;
-    const tot=m=>m.fuel+m.maint+m.tires;
+    const tot=m=>m.fuel+m.maint+m.tires+m.fixed;
     const sc=niceScale(Math.max.apply(null,months.map(tot))*1.08,4);
     const y=v=>mt+ph-(v/sc.max)*ph;
     const svg=s('svg',{width:w,height:H,viewBox:'0 0 '+w+' '+H,role:'group','aria-label':'Gráfico de colunas empilhadas do gasto mensal em reais'});
@@ -1805,7 +1918,7 @@ function drawSpend(months){
       if((months.length-1-i)%step===0){ const yr=(i===0||m.k.slice(5)==='01')?' '+m.k.slice(2,4):''; svg.append(s('text',{x:cx,y:H-8,'text-anchor':'middle',class:'t'},monAbbr(m.k)+yr)); }
       hits.push(hitRect(box,tip,segs,ml+band*i,mt,band,ph,monFull(m.k)+' de '+m.k.slice(0,4)+': '+brl.format(cum)+' no total',()=>{
         const lines=[h('div',{class:'tv'},brl.format(tot(m))),h('div',{class:'tl'},monFull(m.k)+' de '+m.k.slice(0,4))];
-        CATS.forEach(c=>{ if(m[c[0]]>0) lines.push(h('div',{class:'tl'},h('span',{class:'tk',style:'background:var(--'+(c[2]==='s1'?'s1':c[2]==='s2'?'s2':'s3')+')'}),c[1]+': '+brl.format(m[c[0]]))); });
+        CATS.forEach(c=>{ if(m[c[0]]>0) lines.push(h('div',{class:'tl'},h('span',{class:'tk',style:'background:var(--'+c[2]+')'}),c[1]+': '+brl.format(m[c[0]]))); });
         return lines;
       },cx,y(cum)));
     });
@@ -1871,7 +1984,7 @@ function viewDash(v,root){
         h('span',{class:'a-ic'},icon(a.lvl==='crit'?'stop':'alert',20)),h('span',{style:'min-width:0'},h('span',{class:'a-t'},a.title),h('br'),h('span',{class:'a-d'},(a.pre||(a.lvl==='crit'?'Urgente: ':'Atenção: '))+a.detail))))):
         h('div',{style:'margin-top:8px;display:grid;gap:6px'},h('div',null,pill('good','Tudo em dia')),h('p',{class:'sub'},'Nenhum lembrete vencendo e nenhum pneu pedindo atenção.'))));
     const months=lastMonths(12,today), sp=spendByMonth(v,months), cur=sp[11], prev=sp[10];
-    const tot=m=>m.fuel+m.maint+m.tires;
+    const tot=m=>m.fuel+m.maint+m.tires+m.fixed;
     let delta=null;
     if(tot(prev)>0||tot(cur)>0){ const d=tot(cur)-tot(prev); delta=d===0?'igual ao mês passado':brl0(Math.abs(d))+(d>0?' a mais':' a menos')+' que em '+monAbbr(prev.k); }
     let lastD=null;
@@ -1882,6 +1995,25 @@ function viewDash(v,root){
       kpi('Último trecho',sum?nf1.format(sum.last):'-',sum?'km/L':null,lastD?lastD.t:'Sem dados',lastD&&lastD.c,lastD&&lastD.ic),
       kpi('Combustível por km',sum?brl.format(sum.perKm):'-',null,sum?'Só o gasto com combustível':'Sem dados'),
       kpi('Gasto em '+monFull(cur.k),brl0(tot(cur)),null,delta||'Sem gastos registrados')));
+    const cw=costWindow(v,today);
+    if(cw&&cw.total>0){
+      const nm=Math.max(1,Math.round(cw.days/30.4));
+      const per=cw.truncated?'desde '+fmtDate(cw.from)+' ('+nm+' '+plural(nm,'mês','meses')+' de histórico)':'de '+fmtDate(addMonths(today,-12))+' até hoje';
+      const lines=[['fuel','Combustível'],['maint','Manutenção'],['tires','Pneus (desgaste)'],['IPVA','IPVA'],['Licenciamento','Licenciamento'],['Seguro','Seguro'],['Outra','Outras despesas'],['dep','Depreciação']].filter(x=>cw.parts[x[0]]>0);
+      const perSub=cw.perKm?(cw.dep?'Com depreciação'+(cw.dep.estimated?' estimada':'')+(cw.perKmOp?'. Sem ela: '+brl.format(cw.perKmOp):''):'Sem depreciação. Informe o valor do carro para incluí-la'):'Precisa de mais de 100 km no período';
+      const est=h('div',{class:'actions',style:'margin-top:4px'},h('button',{type:'button',class:'btn sm',onclick:()=>openEstimates(v)},icon('gauge',15),'Valor do carro e estimativas'));
+      const notes=['Pneus entram pelo desgaste: preço dividido pela vida útil estimada ('+nf0.format(cw.tireLife)+' km) vezes os km rodados no período.'];
+      if(cw.dep) notes.push(cw.dep.estimated?'A depreciação é estimada com perda de '+nf1.format(cw.dep.rate)+'% ao ano a partir do último valor informado. Dois valores de datas diferentes dão um número mais firme.':'Depreciação calculada entre valores informados por você.');
+      if(cw.dep&&cw.dep.raw<0) notes.push('O carro valorizou no período. Não conto valorização como lucro, então a depreciação ficou em zero.');
+      if(cw.tireNoKm>0) notes.push(cw.tireNoKm+' '+plural(cw.tireNoKm,'pneu ficou','pneus ficaram')+' de fora por falta do km de instalação.');
+      notes.push('Despesas contam pela data de pagamento. Parcelas de IPVA ou seguro devem ser registradas uma a uma.');
+      root.append(h('section',{class:'card'},h('h2',null,'Custo dos últimos 12 meses'),h('p',{class:'sub'},per.charAt(0).toUpperCase()+per.slice(1)+'.'),
+        h('div',{class:'kpis tight',style:'margin-top:10px'},
+          kpi('Custo total',brl0(cw.total),null,cw.km>0?nf0.format(cw.km)+' km rodados':'Km do período indisponível'),
+          kpi('Custo por km',cw.perKm?brl.format(cw.perKm):'-',null,perSub)),
+        h('div',{class:'tblwrap',style:'margin-top:8px'},table(['Item','Valor','%'],lines.map(x=>[x[1],brl.format(cw.parts[x[0]]),Math.round(cw.parts[x[0]]/cw.total*100)+'%']))),
+        est,h('p',{class:'hint',style:'margin-top:8px'},notes.join(' '))));
+    }
     if(iv.length){
       const data=iv.slice(-12);
       const legend=h('div',{class:'legend'},h('span',null,h('i',{style:'background:var(--s1)'}),'km/L em cada trecho'),h('span',null,h('i',{class:'ln',style:'background:var(--ink2)'}),'média geral, '+nf1.format(sum.avg)));
@@ -1892,7 +2024,7 @@ function viewDash(v,root){
     if(sum12>0){
       const legend=h('div',{class:'legend'},CATS.map(c=>h('span',null,h('i',{style:'background:var(--'+c[2]+')'}),c[1])));
       root.append(chartCard('Gasto por mês','Últimos 12 meses, em reais. Total: '+brl.format(sum12),legend,drawSpend(sp),
-        table(['Mês','Combustível','Manutenção','Pneus','Total'],sp.filter(m=>tot(m)>0).map(m=>[monAbbr(m.k)+'/'+m.k.slice(2,4),brl.format(m.fuel),brl.format(m.maint),brl.format(m.tires),brl.format(tot(m))]))));
+        table(['Mês','Comb.','Manut.','Pneus','Fixas','Total'],sp.filter(m=>tot(m)>0).map(m=>[monAbbr(m.k)+'/'+m.k.slice(2,4),brl.format(m.fuel),brl.format(m.maint),brl.format(m.tires),brl.format(m.fixed),brl.format(tot(m))]))));
     }
   }
 }
@@ -1952,6 +2084,13 @@ function viewMaint(v,root){
     return h('button',{type:'button',class:'row',onclick:()=>openMaintForm(v,null,{type:p.type})},h('div',{class:'r-main'},h('div',{class:'r-title'},p.type,badge),h('div',{class:'r-sub'},lines),h('div',{class:'r-sub'},'Repete '+every)),h('span',{class:'tadd'},icon('plus',15),'Registrar'));
   })));
   root.append(rc);
+  const exps=[...v.expenses].sort(byDateDesc); const etot=exps.reduce((a,x)=>a+(x.cost||0),0);
+  const ec=h('section',{class:'card'},h('div',{class:'chead',style:'margin-bottom:0'},h('div',null,h('h2',null,'IPVA, licenciamento e seguro'),h('p',{class:'sub'},exps.length?exps.length+' '+plural(exps.length,'despesa','despesas')+' · '+brl.format(etot)+' no total':'Registre aqui o que paga uma vez por ano ou em parcelas.'))));
+  ec.append(h('div',{class:'actions',style:'margin-top:10px'},h('button',{type:'button',class:'btn',onclick:()=>openExpenseForm(v)},icon('plus',16),'Nova despesa')));
+  if(exps.length) ec.append(h('div',{class:'list',style:'margin-top:6px'},exps.map(x=>h('button',{type:'button',class:'row',onclick:()=>openExpenseForm(v,x)},
+    h('div',{class:'r-main'},h('div',{class:'r-title'},(EXP_TYPES.find(t=>t[0]===x.type)||[0,'Outra despesa'])[1]),h('div',{class:'r-sub num'},fmtDate(x.date)),x.notes?h('div',{class:'r-sub'},x.notes):null),
+    h('div',{class:'r-side'},h('div',{class:'r-val'},brl.format(x.cost)))))));
+  root.append(ec);
   const hist=[...v.maint].sort(byDateDesc); const total=hist.reduce((a,m)=>a+(m.cost||0),0);
   const hc=h('section',{class:'card'},h('h2',null,'Histórico'),h('p',{class:'sub'},hist.length+' '+plural(hist.length,'serviço','serviços')+(total>0?' · '+brl.format(total)+' no total':'')));
   if(!hist.length) hc.append(h('div',{class:'empty-note'},'Nenhum serviço registrado. Comece pela última troca de óleo.'));
