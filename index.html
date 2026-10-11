@@ -136,6 +136,7 @@ button.sync span{text-decoration:underline dotted;text-underline-offset:3px}
 .costrow label{display:flex;gap:12px;align-items:center;min-height:46px;cursor:pointer;min-width:0}
 .costrow input{width:20px;height:20px;flex:none;accent-color:var(--s1)}
 .costrow .v,.costrow .p{text-align:right}
+.costrow .cs-sub{display:block;font-size:12.5px;font-weight:400;color:var(--muted);line-height:1.3}
 .costrow.off{color:var(--muted)}.costrow.off .v{text-decoration:line-through}
 .kpis.tight .k-v{font-size:clamp(20px,6.2vw,30px);white-space:nowrap}
 .kpi .k-v small{font-family:var(--ff-body);font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
@@ -312,6 +313,7 @@ function normVehicle(v){
   const o=v||{};
   o.name=o.name||'Veículo'; o.plate=o.plate||''; o.fuelDefault=o.fuelDefault||'gasolina'; o.kmNow=+o.kmNow||0;
   ['fuel','maint','plans','tireHistory','tireEvents','wear','expenses','valuations'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+  o.tireMode=o.tireMode==='paid'?'paid':'wear';
   o.costSel=(o.costSel&&typeof o.costSel==='object'&&!Array.isArray(o.costSel))?o.costSel:{};
   o.depRate=(typeof o.depRate==='number'&&o.depRate>=0&&o.depRate<=60)?o.depRate:null;
   o.tireLifeKm=(typeof o.tireLifeKm==='number'&&o.tireLifeKm>=5000)?o.tireLifeKm:null;
@@ -419,7 +421,10 @@ function costWindow(v,today){
   (v.maint||[]).forEach(x=>{ if(inWin(x.date)&&x.cost>0) parts.maint+=x.cost; });
   (v.expenses||[]).forEach(x=>{ if(inWin(x.date)&&x.cost>0){ const k=['IPVA','Licenciamento','Seguro'].indexOf(x.type)>=0?x.type:'Outra'; parts[k]+=x.cost; } });
   const life=v.tireLifeKm||TIRE_LIFE_DEFAULT;
-  const tc=tireWindowCost(v,startKm,endKm,life); parts.tires=tc.cost;
+  const tc=tireWindowCost(v,startKm,endKm,life);
+  let tiresPaid=0; const pd=t=>{ if(t&&t.price>0&&inWin(t.installDate)) tiresPaid+=t.price; };
+  Object.values(v.tires||{}).forEach(pd); (v.tireHistory||[]).forEach(pd);
+  parts.tires=v.tireMode==='paid'?tiresPaid:tc.cost;
   const op=parts.fuel+parts.maint+parts.tires+parts.IPVA+parts.Licenciamento+parts.Seguro+parts.Outra;
   const rate=(v.depRate!=null?v.depRate:DEP_RATE_DEFAULT)/100;
   const vals=(v.valuations||[]).filter(x=>x&&validDateStr(x.date)&&x.value>0).map(x=>({d:dayNum(x.date),val:x.value})).sort((a,b)=>a.d-b.d);
@@ -430,7 +435,7 @@ function costWindow(v,today){
     parts.dep=dep.loss;
   }
   const km=endKm-startKm, total=op+parts.dep;
-  return {from:lo,truncated:truncated,days:dToday-dayNum(lo),km:km,total:total,op:op,parts:parts,dep:dep,tireLife:life,tireNoKm:tc.noKm,
+  return {from:lo,truncated:truncated,days:dToday-dayNum(lo),km:km,total:total,op:op,parts:parts,dep:dep,tireLife:life,tireNoKm:v.tireMode==='paid'?0:tc.noKm,tiresPaid:tiresPaid,tiresWear:tc.cost,tireMode:v.tireMode==='paid'?'paid':'wear',
     perKm:km>=100&&total>0?total/km:null, perKmOp:km>=100&&op>0?op/km:null};
 }
 const COST_ITEMS=[['fuel','Combustível'],['maint','Manutenção'],['tires','Pneus'],['IPVA','IPVA'],['Licenciamento','Licenciamento'],['Seguro','Seguro'],['Outra','Outras despesas'],['dep','Depreciação']];
@@ -1382,6 +1387,7 @@ function openEstimates(v){
   const date=I('ev-date',{type:'date',value:todayStr()});
   const val=I('ev-val',{inputmode:'decimal',placeholder:'Ex.: 62.500,00'});
   const rate=I('ev-rate',{inputmode:'decimal',value:fmtIn(v.depRate!=null?v.depRate:DEP_RATE_DEFAULT),placeholder:'10'});
+  const tmode=SEL('ev-tmode',[['wear','Pelo desgaste (preço ÷ vida útil × km rodados)'],['paid','Pelo valor pago, inteiro, na instalação']],v.tireMode==='paid'?'paid':'wear');
   const life=I('ev-life',{inputmode:'numeric',value:String(v.tireLifeKm||TIRE_LIFE_DEFAULT),placeholder:'40000'});
   const list=vals.length?h('div',{class:'list'},vals.map(x=>h('div',{class:'row static'},h('div',{class:'r-main'},h('div',{class:'r-title'},brl.format(x.value)),h('div',{class:'r-sub num'},fmtDate(x.date))),
     h('button',{type:'button',class:'btn sm ghost danger',onclick:()=>{ v.valuations=v.valuations.filter(y=>y.id!==x.id); persist(v.id); openEstimates(v); render(); }},'Apagar')))):h('p',{class:'hint'},'Nenhum valor informado ainda.');
@@ -1390,6 +1396,7 @@ function openEstimates(v){
     h('div',{class:'lbl'},'Valores informados'),list,
     h('div',{class:'lbl'},'Adicionar um valor'),ROW2(F('ev-date','Data da consulta',date),F('ev-val','Valor de mercado (R$)',val)),
     h('div',{class:'lbl'},'Estimativas'),
+    F('ev-tmode','Como contar os pneus no custo',tmode,'Pelo desgaste, 4 pneus novos quase não pesam no começo e o custo se espalha pelos km que eles rodarem. Pelo valor pago, o gasto entra todo no período da compra.'),
     ROW2(F('ev-rate','Perda de valor por ano (%)',rate,'Só vale quando faltar valor informado. Carros usados costumam perder de 5% a 15% ao ano.'),F('ev-life','Vida útil dos pneus (km)',life,'Pneus novos duram de 30.000 a 50.000 km, conforme o uso.')),
     submitBar('Salvar'));
   wireForm(form,()=>{
@@ -1400,7 +1407,7 @@ function openEstimates(v){
       if(!validDate(date.value)) return {error:'Informe a data da consulta.'};
       v.valuations=v.valuations.filter(y=>y.date!==date.value); v.valuations.push({id:'val_'+uid(),date:date.value,value:x});
     }
-    v.depRate=r; v.tireLifeKm=l; closeModal(); commit(v,'Estimativas salvas.'); return {ok:true};
+    v.depRate=r; v.tireLifeKm=l; v.tireMode=tmode.value==='paid'?'paid':'wear'; closeModal(); commit(v,'Estimativas salvas.'); return {ok:true};
   });
   openModal('Valor do carro e estimativas',form,false);
 }
@@ -2021,9 +2028,9 @@ function viewDash(v,root){
         h('div',{class:'costhead'},h('span',null,'Conta no custo'),h('span',{style:'text-align:right'},'Valor'),h('span',{style:'text-align:right'},'%')),
         lines.map(x=>{ const k=x[0], on=sel[k]!==false, id='cs-'+k;
           const cb=h('input',{type:'checkbox',id:id,checked:on,onchange:()=>{ v.costSel=Object.assign({},v.costSel||{}); v.costSel[k]=cb.checked; persist(v.id); render(); }});
-          return h('div',{class:'costrow'+(on?'':' off')},h('label',{for:id},cb,h('span',null,x[1])),h('span',{class:'num v'},brl.format(cw.parts[k])),h('span',{class:'num p'},on&&cs.total>0?Math.round(cw.parts[k]/cs.total*100)+'%':'-')); }));
+          return h('div',{class:'costrow'+(on?'':' off')},h('label',{for:id},cb,h('span',null,x[1],(k==='tires'&&cw.tireMode==='wear'&&cw.tiresPaid>0)?h('small',{class:'cs-sub'},'pagos no período: '+brl.format(cw.tiresPaid)):null)),h('span',{class:'num v'},brl.format(cw.parts[k])),h('span',{class:'num p'},on&&cs.total>0?Math.round(cw.parts[k]/cs.total*100)+'%':'-')); }));
       const est=h('div',{class:'actions',style:'margin-top:4px'},h('button',{type:'button',class:'btn sm',onclick:()=>openEstimates(v)},icon('gauge',15),'Valor do carro e estimativas'));
-      const notes=['Pneus entram pelo desgaste: preço dividido pela vida útil estimada ('+nf0.format(cw.tireLife)+' km) vezes os km rodados no período.'];
+      const notes=[cw.tireMode==='paid'?'Pneus entram pelo valor pago, inteiro, no período em que foram instalados.':'Pneus entram pelo desgaste: preço dividido pela vida útil estimada ('+nf0.format(cw.tireLife)+' km) vezes os km rodados no período. Pneu novo pesa pouco no começo e vai pesando conforme rola. Para contar o valor pago de uma vez, mude em «Valor do carro e estimativas».'];
       notes.unshift('Desmarque o que você não quer contar no custo.');
       if(cw.dep) notes.push(cw.dep.estimated?'A depreciação é estimada com perda de '+nf1.format(cw.dep.rate)+'% ao ano a partir do último valor informado. Dois valores de datas diferentes dão um número mais firme.':'Depreciação calculada entre valores informados por você.');
       if(cw.dep&&cw.dep.raw<0) notes.push('O carro valorizou no período. Não conto valorização como lucro, então a depreciação ficou em zero.');
