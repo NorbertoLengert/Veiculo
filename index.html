@@ -129,6 +129,14 @@ button.sync span{text-decoration:underline dotted;text-underline-offset:3px}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
 .kpi .k-l{font-size:12.5px;color:var(--muted);font-weight:500}
 .kpi .k-v{font-family:var(--ff-display);font-weight:700;font-size:34px;line-height:1.05;margin-top:4px;letter-spacing:.2px}
+.costlist{margin-top:10px;display:grid}
+.costhead,.costrow{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;gap:8px;align-items:center}
+.costhead{font-size:13px;font-weight:600;color:var(--muted);padding:2px 0 6px;border-bottom:1px solid var(--line)}
+.costrow{min-height:46px;border-bottom:1px solid var(--line);font-size:15px}
+.costrow label{display:flex;gap:12px;align-items:center;min-height:46px;cursor:pointer;min-width:0}
+.costrow input{width:20px;height:20px;flex:none;accent-color:var(--s1)}
+.costrow .v,.costrow .p{text-align:right}
+.costrow.off{color:var(--muted)}.costrow.off .v{text-decoration:line-through}
 .kpis.tight .k-v{font-size:clamp(20px,6.2vw,30px);white-space:nowrap}
 .kpi .k-v small{font-family:var(--ff-body);font-size:13px;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
 .kpi .k-s{font-size:12.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
@@ -304,6 +312,7 @@ function normVehicle(v){
   const o=v||{};
   o.name=o.name||'Veículo'; o.plate=o.plate||''; o.fuelDefault=o.fuelDefault||'gasolina'; o.kmNow=+o.kmNow||0;
   ['fuel','maint','plans','tireHistory','tireEvents','wear','expenses','valuations'].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=[]; });
+  o.costSel=(o.costSel&&typeof o.costSel==='object'&&!Array.isArray(o.costSel))?o.costSel:{};
   o.depRate=(typeof o.depRate==='number'&&o.depRate>=0&&o.depRate<=60)?o.depRate:null;
   o.tireLifeKm=(typeof o.tireLifeKm==='number'&&o.tireLifeKm>=5000)?o.tireLifeKm:null;
   o.tires=Object.assign({DE:null,DD:null,TE:null,TD:null,ES:null},o.tires||{});
@@ -423,6 +432,13 @@ function costWindow(v,today){
   const km=endKm-startKm, total=op+parts.dep;
   return {from:lo,truncated:truncated,days:dToday-dayNum(lo),km:km,total:total,op:op,parts:parts,dep:dep,tireLife:life,tireNoKm:tc.noKm,
     perKm:km>=100&&total>0?total/km:null, perKmOp:km>=100&&op>0?op/km:null};
+}
+const COST_ITEMS=[['fuel','Combustível'],['maint','Manutenção'],['tires','Pneus'],['IPVA','IPVA'],['Licenciamento','Licenciamento'],['Seguro','Seguro'],['Outra','Outras despesas'],['dep','Depreciação']];
+function costSummary(cw,sel){
+  const on=k=>!(sel&&sel[k]===false);
+  let total=0, op=0;
+  COST_ITEMS.forEach(x=>{ const val=cw.parts[x[0]]||0; if(val>0&&on(x[0])){ total+=val; if(x[0]!=='dep') op+=val; } });
+  return {total:total,op:op,perKm:cw.km>=100&&total>0?total/cw.km:null,perKmOp:cw.km>=100&&op>0?op/cw.km:null,depOn:on('dep')&&cw.parts.dep>0};
 }
 function validDateStr(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d)&&!isNaN(dayNum(d)); }
 function planStatus(plan,maint,kmNow,today){
@@ -1999,19 +2015,25 @@ function viewDash(v,root){
     if(cw&&cw.total>0){
       const nm=Math.max(1,Math.round(cw.days/30.4));
       const per=cw.truncated?'desde '+fmtDate(cw.from)+' ('+nm+' '+plural(nm,'mês','meses')+' de histórico)':'de '+fmtDate(addMonths(today,-12))+' até hoje';
-      const lines=[['fuel','Combustível'],['maint','Manutenção'],['tires','Pneus (desgaste)'],['IPVA','IPVA'],['Licenciamento','Licenciamento'],['Seguro','Seguro'],['Outra','Outras despesas'],['dep','Depreciação']].filter(x=>cw.parts[x[0]]>0);
-      const perSub=cw.perKm?(cw.dep?'Com depreciação'+(cw.dep.estimated?' estimada':'')+(cw.perKmOp?'. Sem ela: '+brl.format(cw.perKmOp):''):'Sem depreciação. Informe o valor do carro para incluí-la'):'Precisa de mais de 100 km no período';
+      const sel=v.costSel||{}, cs=costSummary(cw,sel), lines=COST_ITEMS.filter(x=>cw.parts[x[0]]>0);
+      const perSub=cs.perKm?(cs.depOn?'Com depreciação'+(cw.dep&&cw.dep.estimated?' estimada':'')+(cs.perKmOp?'. Sem ela: '+brl.format(cs.perKmOp):''):(cw.parts.dep>0?'Sem depreciação (desmarcada)':'Sem depreciação. Informe o valor do carro para incluí-la')):(cs.total>0?'Precisa de mais de 100 km no período':'Marque ao menos um item');
+      const rows=h('div',{class:'costlist',role:'group','aria-label':'Itens que entram no custo'},
+        h('div',{class:'costhead'},h('span',null,'Conta no custo'),h('span',{style:'text-align:right'},'Valor'),h('span',{style:'text-align:right'},'%')),
+        lines.map(x=>{ const k=x[0], on=sel[k]!==false, id='cs-'+k;
+          const cb=h('input',{type:'checkbox',id:id,checked:on,onchange:()=>{ v.costSel=Object.assign({},v.costSel||{}); v.costSel[k]=cb.checked; persist(v.id); render(); }});
+          return h('div',{class:'costrow'+(on?'':' off')},h('label',{for:id},cb,h('span',null,x[1])),h('span',{class:'num v'},brl.format(cw.parts[k])),h('span',{class:'num p'},on&&cs.total>0?Math.round(cw.parts[k]/cs.total*100)+'%':'-')); }));
       const est=h('div',{class:'actions',style:'margin-top:4px'},h('button',{type:'button',class:'btn sm',onclick:()=>openEstimates(v)},icon('gauge',15),'Valor do carro e estimativas'));
       const notes=['Pneus entram pelo desgaste: preço dividido pela vida útil estimada ('+nf0.format(cw.tireLife)+' km) vezes os km rodados no período.'];
+      notes.unshift('Desmarque o que você não quer contar no custo.');
       if(cw.dep) notes.push(cw.dep.estimated?'A depreciação é estimada com perda de '+nf1.format(cw.dep.rate)+'% ao ano a partir do último valor informado. Dois valores de datas diferentes dão um número mais firme.':'Depreciação calculada entre valores informados por você.');
       if(cw.dep&&cw.dep.raw<0) notes.push('O carro valorizou no período. Não conto valorização como lucro, então a depreciação ficou em zero.');
       if(cw.tireNoKm>0) notes.push(cw.tireNoKm+' '+plural(cw.tireNoKm,'pneu ficou','pneus ficaram')+' de fora por falta do km de instalação.');
       notes.push('Despesas contam pela data de pagamento. Parcelas de IPVA ou seguro devem ser registradas uma a uma.');
       root.append(h('section',{class:'card'},h('h2',null,'Custo dos últimos 12 meses'),h('p',{class:'sub'},per.charAt(0).toUpperCase()+per.slice(1)+'.'),
         h('div',{class:'kpis tight',style:'margin-top:10px'},
-          kpi('Custo total',brl0(cw.total),null,cw.km>0?nf0.format(cw.km)+' km rodados':'Km do período indisponível'),
-          kpi('Custo por km',cw.perKm?brl.format(cw.perKm):'-',null,perSub)),
-        h('div',{class:'tblwrap',style:'margin-top:8px'},table(['Item','Valor','%'],lines.map(x=>[x[1],brl.format(cw.parts[x[0]]),Math.round(cw.parts[x[0]]/cw.total*100)+'%']))),
+          kpi('Custo total',brl0(cs.total),null,cw.km>0?nf0.format(cw.km)+' km rodados':'Km do período indisponível'),
+          kpi('Custo por km',cs.perKm?brl.format(cs.perKm):'-',null,perSub)),
+        rows,
         est,h('p',{class:'hint',style:'margin-top:8px'},notes.join(' '))));
     }
     if(iv.length){
